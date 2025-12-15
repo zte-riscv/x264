@@ -235,6 +235,31 @@ endif
 
 endif
 
+# RISCV optimization
+ifeq ($(SYS_ARCH),RISCV)
+ifneq ($(findstring HAVE_RVV 1, $(CONFIG)),)
+SRCASM_X += common/riscv/bitstream-a.S \
+			common/riscv/dct-a.S       \
+			common/riscv/deblock-a.S \
+			common/riscv/pixel-a.S	\
+			common/riscv/quant-a.S	\
+			common/riscv/predict-a.S	\
+			common/riscv/mc-a.S
+
+SRCS_X += common/riscv/predict-c.c \
+		  common/riscv/mc-c.c
+
+OBJASM +=
+ifneq ($(findstring HAVE_BITDEPTH8 1, $(CONFIG)),)
+OBJASM += $(SRCASM_X:%.S=%-8.o)
+endif
+ifneq ($(findstring HAVE_BITDEPTH10 1, $(CONFIG)),)
+OBJASM += $(SRCASM_X:%.S=%-10.o)
+endif
+
+endif
+endif
+
 ifneq ($(HAVE_GETOPT_LONG),1)
 SRCCLI += extras/getopt.c
 endif

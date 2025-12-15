@@ -49,7 +49,9 @@
 #if HAVE_LSX
 #   include "loongarch/predict.h"
 #endif
-
+#if HAVE_RVV
+#   include "riscv/predict.h"
+#endif
 /****************************************************************************
  * 16x16 prediction for intra luma block
  ****************************************************************************/
@@ -931,6 +933,10 @@ void x264_predict_16x16_init( uint32_t cpu, x264_predict_t pf[7] )
 #if HAVE_LSX
     x264_predict_16x16_init_loongarch( cpu, pf );
 #endif
+
+#if HAVE_RVV
+    x264_predict_16x16_init_rvv( cpu, pf );
+#endif
 }
 
 void x264_predict_8x8c_init( uint32_t cpu, x264_predict_t pf[7] )
@@ -972,6 +978,10 @@ void x264_predict_8x8c_init( uint32_t cpu, x264_predict_t pf[7] )
 #if HAVE_LSX
     x264_predict_8x8c_init_loongarch( cpu, pf );
 #endif
+
+#if HAVE_RVV
+    x264_predict_8x8c_init_rvv( cpu, pf );
+#endif
 }
 
 void x264_predict_8x16c_init( uint32_t cpu, x264_predict_t pf[7] )
@@ -994,6 +1004,10 @@ void x264_predict_8x16c_init( uint32_t cpu, x264_predict_t pf[7] )
 
 #if HAVE_AARCH64
     x264_predict_8x16c_init_aarch64( cpu, pf );
+#endif
+
+#if HAVE_RVV
+    x264_predict_8x16c_init_rvv( cpu, pf );
 #endif
 }
 
@@ -1037,6 +1051,10 @@ void x264_predict_8x8_init( uint32_t cpu, x264_predict8x8_t pf[12], x264_predict
 #if HAVE_LSX
     x264_predict_8x8_init_loongarch( cpu, pf, predict_filter );
 #endif
+
+#if HAVE_RVV
+    x264_predict_8x8_init_rvv( cpu, pf, predict_filter );
+#endif
 }
 
 void x264_predict_4x4_init( uint32_t cpu, x264_predict_t pf[12] )
@@ -1068,6 +1086,10 @@ void x264_predict_4x4_init( uint32_t cpu, x264_predict_t pf[12] )
 
 #if HAVE_LSX
     x264_predict_4x4_init_loongarch( cpu, pf );
+#endif
+
+#if HAVE_RVV
+    x264_predict_4x4_init_rvv( cpu, pf );
 #endif
 }
 

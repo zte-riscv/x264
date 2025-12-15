@@ -683,6 +683,9 @@ void x264_macroblock_deblock( x264_t *h )
 #if HAVE_LSX
 #include "loongarch/deblock.h"
 #endif
+#if HAVE_RVV
+#include "riscv/deblock.h"
+#endif
 
 void x264_deblock_init( uint32_t cpu, x264_deblock_function_t *pf, int b_mbaff )
 {
@@ -840,6 +843,18 @@ void x264_deblock_init( uint32_t cpu, x264_deblock_function_t *pf, int b_mbaff )
         pf->deblock_luma_intra[1] = x264_deblock_v_luma_intra_lasx;
         pf->deblock_luma_intra[0] = x264_deblock_h_luma_intra_lasx;
         pf->deblock_strength = x264_deblock_strength_lasx;
+    }
+#endif
+
+#if HAVE_RVV
+    if( cpu&X264_CPU_RVV )
+    {
+        pf->deblock_luma[1] = x264_deblock_v_luma_rvv;
+        // pf->deblock_luma[0] = x264_deblock_h_luma_rvv;
+        pf->deblock_luma_intra[1] = x264_deblock_v_luma_intra_rvv;
+        pf->deblock_chroma[1] = x264_deblock_v_chroma_rvv;
+        pf->deblock_chroma_intra[1] = x264_deblock_v_chroma_intra_rvv;
+        pf->deblock_strength = x264_deblock_strength_rvv;
     }
 #endif
 

@@ -46,6 +46,9 @@
 #if HAVE_LSX
 #   include "loongarch/quant.h"
 #endif
+#if HAVE_RVV
+#   include "riscv/quant.h"
+#endif
 
 #define QUANT_ONE( coef, mf, f ) \
 { \
@@ -592,6 +595,31 @@ void x264_quant_init( x264_t *h, uint32_t cpu, x264_quant_function_t *pf )
     }
 
 #endif // HAVE_AARCH64
+
+#if HAVE_RVV
+    if( cpu&X264_CPU_RVV )
+    {
+        // pf->quant_2x2_dc   = x264_quant_2x2_dc_rvv;
+        // pf->quant_4x4_dc   = x264_quant_4x4_dc_rvv;
+        // pf->quant_4x4      = x264_quant_4x4_rvv;
+        // pf->quant_4x4x4    = x264_quant_4x4x4_rvv;
+        // pf->quant_8x8      = x264_quant_8x8_rvv;
+
+        // pf->dequant_4x4    = x264_dequant_4x4_rvv;
+        // pf->dequant_8x8    = x264_dequant_8x8_rvv;
+        // pf->dequant_4x4_dc = x264_dequant_4x4_dc_rvv;
+
+        // pf->coeff_last[ DCT_LUMA_AC] = x264_coeff_last15_rvv;
+        // pf->coeff_last[DCT_LUMA_4x4] = x264_coeff_last16_rvv;
+
+        // // bug
+        pf->decimate_score15 = x264_decimate_score15_rvv;
+        pf->decimate_score16 = x264_decimate_score16_rvv;
+        pf->decimate_score64 = x264_decimate_score64_rvv;
+
+    }
+#endif
+
 #else // !HIGH_BIT_DEPTH
 #if HAVE_MMX
     INIT_TRELLIS( sse2 );
@@ -871,6 +899,29 @@ void x264_quant_init( x264_t *h, uint32_t cpu, x264_quant_function_t *pf )
         pf->coeff_last[DCT_LUMA_8x8] = x264_coeff_last64_lasx;
         pf->coeff_level_run[ DCT_LUMA_AC] = x264_coeff_level_run15_lasx;
         pf->coeff_level_run[DCT_LUMA_4x4] = x264_coeff_level_run16_lasx;
+    }
+#endif
+
+#if HAVE_RVV
+    if( cpu&X264_CPU_RVV )
+    {
+        pf->quant_2x2_dc   = x264_quant_2x2_dc_rvv;
+        pf->quant_4x4_dc   = x264_quant_4x4_dc_rvv;
+        pf->quant_4x4      = x264_quant_4x4_rvv;
+        pf->quant_4x4x4    = x264_quant_4x4x4_rvv;
+        pf->quant_8x8      = x264_quant_8x8_rvv;
+
+        pf->dequant_4x4    = x264_dequant_4x4_rvv;
+        pf->dequant_8x8    = x264_dequant_8x8_rvv;
+        pf->dequant_4x4_dc = x264_dequant_4x4_dc_rvv;
+
+        pf->coeff_last[ DCT_LUMA_AC] = x264_coeff_last15_rvv;
+        pf->coeff_last[DCT_LUMA_4x4] = x264_coeff_last16_rvv;
+
+        pf->decimate_score15 = x264_decimate_score15_rvv;
+        pf->decimate_score16 = x264_decimate_score16_rvv;
+        pf->decimate_score64 = x264_decimate_score64_rvv;
+
     }
 #endif
 

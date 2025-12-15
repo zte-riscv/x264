@@ -44,6 +44,9 @@
 #if HAVE_LSX
 #   include "loongarch/dct.h"
 #endif
+#if  HAVE_RVV
+#   include "riscv/dct.h"
+#endif
 static void dct4x4dc( dctcoef d[16] )
 {
     dctcoef tmp[16];
@@ -773,6 +776,28 @@ void x264_dct_init( uint32_t cpu, x264_dct_function_t *dctf )
     }
 #endif
 
+#if HAVE_RVV
+    if ( cpu&X264_CPU_RVV )
+    {
+        dctf->dct4x4dc         = x264_dct4x4dc_rvv;
+        dctf->idct4x4dc        = x264_idct4x4dc_rvv;
+        dctf->add8x8_idct      = x264_add8x8_idct_rvv;
+        dctf->add16x16_idct    = x264_add16x16_idct_rvv;
+        dctf->add4x4_idct      = x264_add4x4_idct_rvv;
+        dctf->sub4x4_dct       = x264_sub4x4_dct_rvv;
+        dctf->sub8x8_dct       = x264_sub8x8_dct_rvv;
+        dctf->sub16x16_dct     = x264_sub16x16_dct_rvv;
+        dctf->sub8x8_dct8      = x264_sub8x8_dct8_rvv;
+        dctf->sub16x16_dct8    = x264_sub16x16_dct8_rvv;
+        dctf->add8x8_idct8     = x264_add8x8_idct8_rvv;
+        dctf->add16x16_idct8   = x264_add16x16_idct8_rvv;
+        dctf->add8x8_idct_dc   = x264_add8x8_idct_dc_rvv;
+        dctf->add16x16_idct_dc = x264_add16x16_idct_dc_rvv;
+        dctf->sub8x8_dct_dc   = x264_sub8x8_dct_dc_rvv;
+        dctf->sub8x16_dct_dc  = x264_sub8x16_dct_dc_rvv;
+    }
+#endif
+
 #endif // HIGH_BIT_DEPTH
 }
 
@@ -1146,5 +1171,11 @@ void x264_zigzag_init( uint32_t cpu, x264_zigzag_function_t *pf_progressive, x26
         pf_progressive->scan_4x4  = x264_zigzag_scan_4x4_frame_lasx;
     }
 #endif
+
+#if HAVE_RVV
+    if ( cpu&X264_CPU_RVV ) {
+        pf_progressive->scan_4x4   = x264_zigzag_scan_4x4_frame_rvv;
+    }
+#endif  // HAVE_RVV
 #endif // !HIGH_BIT_DEPTH
 }

@@ -115,6 +115,27 @@ function pixel_sad\name\()_\w\()x\h\()_neon, export=1
 endfunc
 .endm
 
+function pixel_sad_4x8_neon
+    ld1         {v1.s}[0], [x2], x3
+    ld1         {v0.s}[0], [x0], x1
+    ld1         {v1.s}[1], [x2], x3
+    ld1         {v0.s}[1], [x0], x1
+    uabdl       v16.8h,  v0.8b,  v1.8b
+    ld1         {v1.s}[0], [x2], x3
+    ld1         {v0.s}[0], [x0], x1
+    ld1         {v1.s}[1], [x2], x3
+    ld1         {v0.s}[1], [x0], x1
+    uabal       v16.8h,  v0.8b,  v1.8b
+    ld1         {v1.s}[0], [x2], x3
+    ld1         {v0.s}[0], [x0], x1
+    ld1         {v1.s}[1], [x2], x3
+    ld1         {v0.s}[1], [x0], x1
+    uabal       v16.8h,  v0.8b,  v1.8b
+    uaddlv      s0,  v16.8h
+    fmov        w0,  s0
+    ret
+endfunc
+
 .macro SAD_X_4 x, first=uabal
     ld1         {v0.s}[0], [x0], x7
     ld1         {v1.s}[0], [x1], x5

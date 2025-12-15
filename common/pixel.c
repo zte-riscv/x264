@@ -48,6 +48,9 @@
 #if HAVE_LSX
 #   include "loongarch/pixel.h"
 #endif
+#if HAVE_RVV
+#   include "riscv/pixel.h"
+#endif
 
 /****************************************************************************
  * pixel_sad_WxH
@@ -629,7 +632,7 @@ static void ssim_4x4x2_core( const pixel *pix1, intptr_t stride1,
                              int sums[2][4] )
 {
     for( int z = 0; z < 2; z++ )
-    {
+    {   
         uint32_t s1 = 0, s2 = 0, ss = 0, s12 = 0;
         for( int y = 0; y < 4; y++ )
             for( int x = 0; x < 4; x++ )
@@ -1631,6 +1634,34 @@ void x264_pixel_init( uint32_t cpu, x264_pixel_function_t *pixf )
         pixf->sa8d[PIXEL_8x8]   = x264_pixel_sa8d_8x8_lasx;
     }
 #endif /* HAVE_LSX */
+
+#if HAVE_RVV
+    if( cpu&X264_CPU_RVV )
+    {
+        INIT8( sad, _rvv );
+        INIT8( sad_aligned, _rvv );
+        INIT7( sad_x3, _rvv );
+        INIT7( sad_x4, _rvv );
+        INIT8( satd, _rvv );
+        INIT8( ssd, _rvv );
+        INIT4( hadamard_ac, _rvv );
+        pixf->vsad = x264_pixel_vsad_rvv;
+        pixf->asd8 = x264_pixel_asd8_rvv;
+        pixf->ssd_nv12_core     = x264_pixel_ssd_nv12_core_rvv;
+        pixf->var[PIXEL_8x8]   = x264_pixel_var_8x8_rvv;
+        pixf->var[PIXEL_8x16]   = x264_pixel_var_8x16_rvv;
+        pixf->var[PIXEL_16x16]   = x264_pixel_var_16x16_rvv;
+        pixf->var2[PIXEL_8x8]   = x264_pixel_var2_8x8_rvv;
+        pixf->var2[PIXEL_8x16]   = x264_pixel_var2_8x16_rvv;
+
+        pixf->ssim_4x4x2_core = x264_pixel_ssim_4x4x2_core_rvv;
+        pixf->ssim_end4         = x264_pixel_ssim_end4_rvv;
+
+        pixf->sa8d[PIXEL_8x8]   = x264_pixel_sa8d_8x8_rvv;
+        pixf->sa8d[PIXEL_16x16]   = x264_pixel_sa8d_16x16_rvv;
+
+    }
+#endif
 
 #endif // HIGH_BIT_DEPTH
 #if HAVE_ALTIVEC
