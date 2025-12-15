@@ -189,7 +189,7 @@ MACH    .const_data
 .macro TRANSPOSE4x8_16 t_imm, v0, v1, v2, v3, t0, t1, t2, t3
     li \t_imm, 0xaa
     vmv.v.x v0, \t_imm
-    vsetivli    zero, 4, e32, m1, ta, ma
+    vsetivli    zero, 4, e32, m1, ta, mu
     vmv.v.v \t0, \v0
     vslideup.vi  \t0, \v2, 1, v0.t // trn1
     vmv.v.v \t1, \v1
@@ -200,7 +200,7 @@ MACH    .const_data
     vmv.v.v \t3, \v3
     vslidedown.vi  \t3, \v1, 1, v0.t // trn2
 
-    vsetivli zero, 8, e16, m1, ta, ma
+    vsetivli zero, 8, e16, m1, ta, mu
     vmv.v.x v0, \t_imm
     vmv.v.v \v0, \t0
     vslideup.vi  \v0, \t1, 1, v0.t // trn1

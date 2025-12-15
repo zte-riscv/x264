@@ -230,7 +230,7 @@ function sub8x4_dct_rvv, export=0
     
     vmv1r.v         v6, v2
     vmv1r.v         v7, v3
-    vsetivli        zero, 1, e64, m1, ta, ma
+    vsetivli        zero, 1, e64, m1, tu, ma
     vslidedown.vi   v6, v0, 1
     vslidedown.vi   v7, v1, 1
 
@@ -518,7 +518,7 @@ function add8x4_idct_rvv
     vslideup.vi v0, v2, 1
     vmv1r.v     v22, v1
     vslideup.vi v1, v3, 1
-    vsetivli    zero, 1, e64, m1, ta, ma
+    vsetivli    zero, 1, e64, m1, tu, ma
     vslidedown.vi v2, v20, 1
     vslidedown.vi v3, v22, 1
 

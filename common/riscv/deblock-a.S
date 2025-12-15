@@ -149,7 +149,7 @@ endconst
     vzext.vf2       v4, v1
     vsetivli        zero, 16, e8, m1, ta, ma
     vslidedown.vi   v3, v16, 8
-    vsetivli        zero, 8, e8, m1, ta, ma
+    vsetivli        zero, 8, e8, m1, tu, ma
     vwsubu.wv       v4, v4, v16
     vwsubu.wv       v20, v20, v3
 
