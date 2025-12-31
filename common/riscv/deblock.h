@@ -28,8 +28,8 @@
 
 #define x264_deblock_v_luma_rvv x264_template(deblock_v_luma_rvv)
 void x264_deblock_v_luma_rvv  ( uint8_t *pix, intptr_t stride, int alpha, int beta, int8_t *tc0 );
-// #define x264_deblock_h_luma_rvv x264_template(deblock_h_luma_rvv)
-// void x264_deblock_h_luma_rvv  ( uint8_t *pix, intptr_t stride, int alpha, int beta, int8_t *tc0 );
+#define x264_deblock_h_luma_rvv x264_template(deblock_h_luma_rvv)
+void x264_deblock_h_luma_rvv  ( uint8_t *pix, intptr_t stride, int alpha, int beta, int8_t *tc0 );
 #define x264_deblock_v_chroma_rvv x264_template(deblock_v_chroma_rvv)
 void x264_deblock_v_chroma_rvv( uint8_t *pix, intptr_t stride, int alpha, int beta, int8_t *tc0 );
 // #define x264_deblock_h_chroma_rvv x264_template(deblock_h_chroma_rvv)

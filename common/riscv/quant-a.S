@@ -192,10 +192,8 @@ endfunc
 .endm
 
 .macro QUANT_END d
-    li              a0, 0
-    beqz            \d, 1f
-    addi            a0, a0, 1
-1:
+    li          a0, 1
+    czero.eqz   a0, a0, \d
     ret
 .endm
 
@@ -203,11 +201,9 @@ endfunc
 function quant_2x2_dc_rvv
     vsetivli        zero, 4, e16, mf2, ta, ma
     vle16.v         v0, (a0)
-    vmv.v.x         v2, a2
-    vmv.v.x         v1, a1
     vabs            v3, v0, v8
-    vadd.vv         v3, v3, v2
-    vwmulu.vv       v10, v3, v1
+    vadd.vx         v3, v3, a2
+    vwmulu.vx       v10, v3, a1
     vsra.vi         v0, v0, 15
     vnsrl.wi        v8, v10, 16
     vxor.vv         v3, v8, v0
@@ -302,22 +298,18 @@ function quant_4x4x4_rvv
     vmv.x.s         a5, v5
     vmv.x.s         a6, v4
     
-    li              a0, 0
-    beqz            a3, 1f
-    addi            a0, a0, 1
-1:
-    slli            a0, a0, 1
-    beqz            a4, 2f
-    addi            a0, a0, 1
-2:
-    slli            a0, a0, 1
-    beqz            a5, 3f
-    addi            a0, a0, 1
-3:
-    slli            a0, a0, 1
-    beqz            a6, 4f
-    addi            a0, a0, 1
-4:
+    li              a0, 0x8
+    czero.eqz       a0, a0, a3
+    li              t0, 0x4
+    czero.eqz       t0, t0, a4
+    or              a0, a0, t0
+    li              t0, 0x2
+    czero.eqz       t0, t0, a5
+    or              a0, a0, t0
+    li              t0, 1
+    czero.eqz       t0, t0, a6
+    or              a0, a0, t0
+
     ret
 endfunc
 

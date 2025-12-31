@@ -62,7 +62,7 @@ function dct4x4dc_rvv
     mv              t2, a0
     vsetivli        zero, 4, e16, mf2, ta, ma
     li              t1, 8
-    vlsseg4e16.v    v2, (a0), t1
+    vlseg4e16.v     v2, (a0)
     SUMSUB_ABCD     v6, v7, v8, v9, v2, v3, v4, v5
     SUMSUB_ABCD     v2, v3, v5, v4, v6, v8, v7, v9
     vse16.v         v2, (t2)
@@ -72,7 +72,7 @@ function dct4x4dc_rvv
     vse16.v         v4, (t2)
     add             t2, t2, t1
     vse16.v         v5, (t2)
-    vlsseg4e16.v    v2, (a0), t1
+    vlseg4e16.v     v2, (a0)
     SUMSUB_ABCD     v6, v7, v8, v9, v2, v3, v4, v5
     vwadd.vv        v2, v6, v8
     vwsub.vv        v3, v6, v8
@@ -85,7 +85,7 @@ function dct4x4dc_rvv
     vnclip.wi       v4, v4, 1
     vnclip.wi       v5, v5, 1
 
-    vssseg4e16.v    v2, (a0), t1
+    vsseg4e16.v    v2, (a0)
     ret
 endfunc
 
@@ -93,7 +93,7 @@ function idct4x4dc_rvv
     add             t2, zero, a0
     vsetivli        zero, 4, e16, mf2, ta, ma
     li t1, 8
-    vlsseg4e16.v    v2, (a0), t1
+    vlseg4e16.v     v2, (a0)
     SUMSUB_ABCD     v6, v7, v8, v9, v2, v3, v4, v5
     SUMSUB_ABCD     v2, v3, v5, v4, v6, v8, v7, v9
     vse16.v         v2, (t2)
@@ -103,10 +103,10 @@ function idct4x4dc_rvv
     vse16.v         v4, (t2)
     add t2,         t2, t1
     vse16.v         v5, (t2)
-    vlsseg4e16.v    v2, (a0), t1
+    vlseg4e16.v     v2, (a0)
     SUMSUB_ABCD     v6, v7, v8, v9, v2, v3, v4, v5
     SUMSUB_ABCD     v2, v3, v5, v4, v6, v8, v7, v9
-    vssseg4e16.v    v2, (a0), t1
+    vsseg4e16.v     v2, (a0)
     ret
 endfunc
 
@@ -766,17 +766,10 @@ function add8x8_idct_dc_rvv
     vle16.v     v16, (a1)
     vssra.vi    v16, v16, 6
     vsetivli    zero, 8, e16, m1, ta, ma
-    vmv.x.s     a3, v16
-    vmv.v.x     v20, a3
-    vslidedown.vi v16, v16, 1
-    vmv.x.s     a3, v16
-    vmv.v.x     v21, a3
-    vslidedown.vi v16, v16, 1
-    vmv.x.s     a3, v16
-    vmv.v.x     v22, a3
-    vslidedown.vi v16, v16, 1
-    vmv.x.s     a3, v16
-    vmv.v.x     v23, a3
+    vrgather.vi  v20, v16, 0
+    vrgather.vi  v21, v16, 1
+    vrgather.vi  v22, v16, 2
+    vrgather.vi  v23, v16, 3
 
     vsetivli    zero, 2, e64, m1, ta, ma
     vslideup.vi v20, v21, 1
@@ -848,17 +841,10 @@ endfunc
     add         a0, a0, t5
 
     vsetivli    zero, 8, e16, m1, ta, ma
-    vmv.x.s     a3, \dc
-    vmv.v.x     v24, a3
-    vslidedown.vi \dc, \dc, 1
-    vmv.x.s     a3, \dc
-    vmv.v.x     v25, a3
-    vslidedown.vi \dc, \dc, 1
-    vmv.x.s     a3, \dc
-    vmv.v.x     v26, a3
-    vslidedown.vi \dc, \dc, 1
-    vmv.x.s     a3, \dc
-    vmv.v.x     v27, a3
+    vrgather.vi     v24, \dc, 0
+    vrgather.vi     v25, \dc, 1
+    vrgather.vi     v26, \dc, 2
+    vrgather.vi     v27, \dc, 3
 
     vsetivli    zero, 2, e64, m1, ta, ma
     vslideup.vi v24, v25, 1
@@ -875,6 +861,7 @@ endfunc
     vmax.vx     v27, v27, zero
 
     csrwi  vxrm, 0
+    // TODO: if not suppot VLA, here can just using m1 vnclipu without vslideup
     vsetvli     zero, zero, e8, mf2, ta, ma
     vnclipu.wi  v20, v24, 0
     vnclipu.wi  v21, v26, 0

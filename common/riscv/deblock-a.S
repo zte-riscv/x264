@@ -120,11 +120,7 @@ endconst
     vand.vv         v27, v27, v21
     vand.vv         v24, v24, v21
 
-    vwaddu.vv       v28, v16, v1
-    vsetivli        zero, 16, e16, m2, ta, ma
-    vssrl.vi        v28, v28, 1
-    vsetivli        zero, 16, e8, m1, ta, ma
-    vnsrl.wi        v28, v28, 0
+    vaaddu.vv        v28, v16, v1
 
     vsub.vv         v21, v24, v25
     vsaddu.vv       v23, v18, v24
@@ -149,14 +145,14 @@ endconst
     vzext.vf2       v4, v1
     vsetivli        zero, 16, e8, m1, ta, ma
     vslidedown.vi   v3, v16, 8
-    vsetivli        zero, 8, e8, m1, tu, ma
+    vsetivli        zero, 8, e8, mf2, ta, ma
     vwsubu.wv       v4, v4, v16
     vwsubu.wv       v20, v20, v3
 
     vsetivli        zero, 8, e16, m1, ta, ma
     vsll.vi         v4, v4, 2
     vsll.vi         v20, v20, 2
-    vsetivli        zero, 8, e8, m1, ta, ma
+    vsetivli        zero, 8, e8, mf2, ta, ma
     vwaddu.wv       v30, v4, v18
     vwsubu.wv       v4, v30, v2
     vsetivli        zero, 16, e8, m1, ta, ma

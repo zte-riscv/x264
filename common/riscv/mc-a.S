@@ -721,15 +721,14 @@ function mc_weight_w4_\name\()_rvv, export=1
     csrwi  vxrm, 0
     ld t0, 0(a4)
     vsetivli    zero, 4, e8, mf4, ta, ma
-    vmv.v.x   v31, t0
 1:
     addi  a5, a5, -2
     vle8.v    v1, (a2)
     add       a2, a2, a3
     vle8.v    v2, (a2)
     add       a2, a2, a3
-    \op       v1, v1, v31
-    \op       v2, v2, v31
+    \op       v1, v1, t0
+    \op       v2, v2, t0
 
     vse8.v    v1, (a0)
     add       a0, a0, a1
@@ -743,15 +742,14 @@ function mc_weight_w8_\name\()_rvv, export=1
     csrwi  vxrm, 0
     ld t0, 0(a4)
     vsetivli    zero, 8, e8, mf2, ta, ma
-    vmv.v.x   v31, t0
 1:
     addi  a5, a5, -2
     vle8.v    v1, (a2)
     add       a2, a2, a3
     vle8.v    v2, (a2)
     add       a2, a2, a3
-    \op       v1, v1, v31
-    \op       v2, v2, v31
+    \op       v1, v1, t0
+    \op       v2, v2, t0
 
     vse8.v    v1, (a0)
     add       a0, a0, a1
@@ -765,15 +763,14 @@ function mc_weight_w16_\name\()_rvv, export=1
     csrwi  vxrm, 0
     ld t0, 0(a4)
     vsetivli    zero, 16, e8, m1, ta, ma
-    vmv.v.x   v31, t0
 1:
     addi  a5, a5, -2
     vle8.v    v1, (a2)
     add       a2, a2, a3
     vle8.v    v2, (a2)
     add       a2, a2, a3
-    \op       v1, v1, v31
-    \op       v2, v2, v31
+    \op       v1, v1, t0
+    \op       v2, v2, t0
 
     vse8.v    v1, (a0)
     add       a0, a0, a1
@@ -788,15 +785,14 @@ function mc_weight_w20_\name\()_rvv, export=1
     csrwi  vxrm, 0
     ld t0, 0(a4)
     vsetivli    zero, 20, e8, m2, ta, ma
-    vmv.v.x   v30, t0
 1:
     addi  a5, a5, -2
     vle8.v    v4, (a2)
     add       a2, a2, a3
     vle8.v    v2, (a2)
     add       a2, a2, a3
-    \op       v4, v4, v30
-    \op       v2, v2, v30
+    \op       v4, v4, t0
+    \op       v2, v2, t0
 
     vse8.v    v4, (a0)
     add       a0, a0, a1
@@ -808,8 +804,81 @@ endfunc
 
 .endm
 
-weight_simple offsetadd, vsaddu.vv
-weight_simple offsetsub, vssubu.vv
+weight_simple offsetadd, vsaddu.vx
+weight_simple offsetsub, vssubu.vx
+
+// void mc_copy( uint8_t *dst, intptr_t dst_stride, uint8_t *src, intptr_t src_stride, int height )
+function mc_copy_w4_rvv, export=1
+1:
+    addi a4, a4, -4
+    vsetivli    zero, 4, e8, mf4, ta, ma
+    vle8.v   v0, (a2)
+    add    a2, a2, a3
+    vle8.v   v1, (a2)
+    add    a2, a2, a3
+    vle8.v   v2, (a2)
+    add    a2, a2, a3
+    vle8.v   v3, (a2)
+    add    a2, a2, a3
+    vse8.v   v0, (a0)
+    add    a0, a0, a1
+    vse8.v   v1, (a0)
+    add    a0, a0, a1
+    vse8.v   v2, (a0)
+    add    a0, a0, a1
+    vse8.v   v3, (a0)
+    add    a0, a0, a1
+    bnez   a4, 1b
+    ret
+endfunc
+
+function mc_copy_w8_rvv, export=1
+1:
+    addi a4, a4, -4
+    vsetivli    zero, 8, e8, mf2, ta, ma
+    vle8.v   v0, (a2)
+    add    a2, a2, a3
+    vle8.v   v1, (a2)
+    add    a2, a2, a3
+    vle8.v   v2, (a2)
+    add    a2, a2, a3
+    vle8.v   v3, (a2)
+    add    a2, a2, a3
+    vse8.v   v0, (a0)
+    add    a0, a0, a1
+    vse8.v   v1, (a0)
+    add    a0, a0, a1
+    vse8.v   v2, (a0)
+    add    a0, a0, a1
+    vse8.v   v3, (a0)
+    add    a0, a0, a1
+    bnez   a4, 1b
+    ret
+endfunc
+
+function mc_copy_w16_rvv, export=1
+1:
+    addi a4, a4, -4
+    vsetivli    zero, 16, e8, m1, ta, ma
+    vle8.v   v0, (a2)
+    add    a2, a2, a3
+    vle8.v   v1, (a2)
+    add    a2, a2, a3
+    vle8.v   v2, (a2)
+    add    a2, a2, a3
+    vle8.v   v3, (a2)
+    add    a2, a2, a3
+    vse8.v   v0, (a0)
+    add    a0, a0, a1
+    vse8.v   v1, (a0)
+    add    a0, a0, a1
+    vse8.v   v2, (a0)
+    add    a0, a0, a1
+    vse8.v   v3, (a0)
+    add    a0, a0, a1
+    bnez   a4, 1b
+    ret
+endfunc
 
 #endif // BIT_DEPTH == 8
 
