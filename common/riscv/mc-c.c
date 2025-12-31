@@ -103,6 +103,21 @@ static void (* const pixel_avg_wtab_rvv[6])( pixel *, intptr_t, pixel *, intptr_
     x264_pixel_avg2_w20_rvv,
 };
 
+#define x264_mc_copy_w4_rvv x264_template(mc_copy_w4_rvv)
+void x264_mc_copy_w4_rvv ( pixel *, intptr_t, pixel *, intptr_t, int );
+#define x264_mc_copy_w8_rvv x264_template(mc_copy_w8_rvv)
+void x264_mc_copy_w8_rvv ( pixel *, intptr_t, pixel *, intptr_t, int );
+#define x264_mc_copy_w16_rvv x264_template(mc_copy_w16_rvv)
+void x264_mc_copy_w16_rvv( pixel *, intptr_t, pixel *, intptr_t, int );
+static void (* const mc_copy_wtab_rvv[5])( pixel *, intptr_t, pixel *, intptr_t, int ) =
+{
+    NULL,
+    x264_mc_copy_w4_rvv,
+    x264_mc_copy_w8_rvv,
+    NULL,
+    x264_mc_copy_w16_rvv,
+};
+
 static void weight_cache_rvv( x264_t *h, x264_weight_t *w )
 {
     if( w->i_scale == 1<<w->i_denom )
@@ -122,17 +137,6 @@ static void weight_cache_rvv( x264_t *h, x264_weight_t *w )
         w->weightfn = mc_nodenom_wtab_rvv;
     else
         w->weightfn = mc_wtab_rvv;
-}
-
-static void mc_copy( pixel *src, intptr_t i_src_stride, pixel *dst, intptr_t i_dst_stride, int i_width, int i_height )
-{
-    for( int y = 0; y < i_height; y++ )
-    {
-        memcpy( dst, src, i_width * SIZEOF_PIXEL );
-
-        src += i_src_stride;
-        dst += i_dst_stride;
-    }
 }
 
 static void mc_luma_rvv( pixel *dst,    intptr_t i_dst_stride,
@@ -158,8 +162,7 @@ static void mc_luma_rvv( pixel *dst,    intptr_t i_dst_stride,
     else if( weight->weightfn )
         weight->weightfn[i_width>>2]( dst, i_dst_stride, src1, i_src_stride, weight, i_height );
     else
-        // mc_copy_wtab_rvv[i_width>>2]( dst, i_dst_stride, src1, i_src_stride, i_height );
-        mc_copy( src1, i_src_stride, dst, i_dst_stride, i_width, i_height );
+        mc_copy_wtab_rvv[i_width>>2]( dst, i_dst_stride, src1, i_src_stride, i_height );
 
 }
 

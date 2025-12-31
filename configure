@@ -868,9 +868,9 @@ case $host_cpu in
         ARCH="RISCV"
         AS="${AS-${CC}}"
         
-        CFLAGS="-march=rv64gcv_zba_zbb $CFLAGS"
-        LDFLAGS="-march=rv64gcv_zba_zbb $LDFLAGS"
-        ASFLAGS="-c -march=rv64gcv_zba_zbb $ASFLAGS"
+        CFLAGS="-march=rv64gcv_zba_zbb_zicond $CFLAGS"
+        LDFLAGS="-march=rv64gcv_zba_zbb_zicond $LDFLAGS"
+        ASFLAGS="-c -march=rv64gcv_zba_zbb_zicond $ASFLAGS"
         ;;
     s390|s390x)
         ARCH="S390"

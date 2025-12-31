@@ -70,8 +70,7 @@ function nal_escape_rvv
     lbu            t2, 0(a3)
     slliw          t3, t6, 16
     or             t4, t3, t2
-    slli           t4, t4, 32
-    srli           t4, t4, 32
+    zext.w         t4, t4
     addi           t4, t4, -3
     bgtz           t4, 102f
 
@@ -84,16 +83,14 @@ function nal_escape_rvv
     addi           a5, a5, 1
     sb             t2, 0(a0)
     addi           a0, a0, 1
-    slliw          t6, t6, 8
+    slli           t6, t6, 8
     or             t6, t6, t2
     bltz           a5, 101b
     sub            a5, a1, a2
-    srliw          t4, t6, 8
-    andi           t4, t4, 0xff
-    andi           t5, t6, 0xff
+    srli           t4, t6, 8
     vslideup.vi    v7, v1, 2
     vslide1down.vx v7, v7, t4
-    vslide1down.vx v1, v7, t5
+    vslide1down.vx v1, v7, t6
 
     bltz           a5, 0b
     j              99f
