@@ -92,6 +92,12 @@ MC_WEIGHT()
 MC_WEIGHT(_nodenom)
 MC_WEIGHT(_offsetadd)
 MC_WEIGHT(_offsetsub)
+#define x264_mc_copy_w4_rvv x264_template(mc_copy_w4_rvv)
+void x264_mc_copy_w4_rvv ( pixel *, intptr_t, pixel *, intptr_t, int );
+#define x264_mc_copy_w8_rvv x264_template(mc_copy_w8_rvv)
+void x264_mc_copy_w8_rvv ( pixel *, intptr_t, pixel *, intptr_t, int );
+#define x264_mc_copy_w16_rvv x264_template(mc_copy_w16_rvv)
+void x264_mc_copy_w16_rvv( pixel *, intptr_t, pixel *, intptr_t, int );
 
 static void (* const pixel_avg_wtab_rvv[6])( pixel *, intptr_t, pixel *, intptr_t, pixel *, int ) =
 {
@@ -101,6 +107,15 @@ static void (* const pixel_avg_wtab_rvv[6])( pixel *, intptr_t, pixel *, intptr_
     x264_pixel_avg2_w16_rvv,   // no slower than w12, so no point in a separate function
     x264_pixel_avg2_w16_rvv,
     x264_pixel_avg2_w20_rvv,
+};
+
+static void (* const mc_copy_wtab_rvv[5])( pixel *, intptr_t, pixel *, intptr_t, int ) =
+{
+    NULL,
+    x264_mc_copy_w4_rvv,
+    x264_mc_copy_w8_rvv,
+    NULL,
+    x264_mc_copy_w16_rvv,
 };
 
 static void weight_cache_rvv( x264_t *h, x264_weight_t *w )
@@ -158,9 +173,7 @@ static void mc_luma_rvv( pixel *dst,    intptr_t i_dst_stride,
     else if( weight->weightfn )
         weight->weightfn[i_width>>2]( dst, i_dst_stride, src1, i_src_stride, weight, i_height );
     else
-        // mc_copy_wtab_rvv[i_width>>2]( dst, i_dst_stride, src1, i_src_stride, i_height );
-        mc_copy( src1, i_src_stride, dst, i_dst_stride, i_width, i_height );
-
+        mc_copy_wtab_rvv[i_width>>2]( dst, i_dst_stride, src1, i_src_stride, i_height );
 }
 
 static pixel *get_ref_rvv( pixel *dst,   intptr_t *i_dst_stride,
@@ -201,6 +214,11 @@ void x264_mc_init_rvv( uint32_t cpu, x264_mc_functions_t *pf )
 #if !HIGH_BIT_DEPTH
     if( cpu&X264_CPU_RVV )
     {
+        pf->copy_16x16_unaligned = x264_mc_copy_w16_rvv;
+        pf->copy[PIXEL_16x16]    = x264_mc_copy_w16_rvv;
+        pf->copy[PIXEL_8x8]      = x264_mc_copy_w8_rvv;
+        pf->copy[PIXEL_4x4]      = x264_mc_copy_w4_rvv;
+
         pf->avg[PIXEL_16x16] = x264_pixel_avg_16x16_rvv;
         pf->avg[PIXEL_16x8]  = x264_pixel_avg_16x8_rvv;
         pf->avg[PIXEL_8x16]  = x264_pixel_avg_8x16_rvv;

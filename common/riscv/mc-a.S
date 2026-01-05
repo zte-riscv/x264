@@ -811,5 +811,78 @@ endfunc
 weight_simple offsetadd, vsaddu.vv
 weight_simple offsetsub, vssubu.vv
 
+// void mc_copy( uint8_t *dst, intptr_t dst_stride, uint8_t *src, intptr_t src_stride, int height )
+function mc_copy_w4_rvv, export=1
+    vsetivli    zero, 4, e8, mf4, ta, ma
+1:
+    addi        a4, a4, -4
+    vle8.v      v0, (a2)
+    add         a2, a2, a3
+    vle8.v      v1, (a2)
+    add         a2, a2, a3
+    vle8.v      v2, (a2)
+    add         a2, a2, a3
+    vle8.v      v3, (a2)
+    add         a2, a2, a3
+    vse8.v      v0, (a0)
+    add         a0, a0, a1
+    vse8.v      v1, (a0)
+    add         a0, a0, a1
+    vse8.v      v2, (a0)
+    add         a0, a0, a1
+    vse8.v      v3, (a0)
+    add         a0, a0, a1
+    bgtz        a4, 1b
+    ret
+endfunc
+
+function mc_copy_w8_rvv, export=1
+    vsetivli    zero, 8, e8, mf2, ta, ma
+1:
+    addi        a4, a4, -4
+    vle8.v      v0, (a2)
+    add         a2, a2, a3
+    vle8.v      v1, (a2)
+    add         a2, a2, a3
+    vle8.v      v2, (a2)
+    add         a2, a2, a3
+    vle8.v      v3, (a2)
+    add         a2, a2, a3
+    vse8.v      v0, (a0)
+    add         a0, a0, a1
+    vse8.v      v1, (a0)
+    add         a0, a0, a1
+    vse8.v      v2, (a0)
+    add         a0, a0, a1
+    vse8.v      v3, (a0)
+    add         a0, a0, a1
+    bgtz        a4, 1b
+    ret
+endfunc
+
+function mc_copy_w16_rvv, export=1
+    vsetivli    zero, 16, e8, m1, ta, ma
+1:
+    addi        a4, a4, -4
+    vle8.v      v0, (a2)
+    add         a2, a2, a3
+    vle8.v      v1, (a2)
+    add         a2, a2, a3
+    vle8.v      v2, (a2)
+    add         a2, a2, a3
+    vle8.v      v3, (a2)
+    add         a2, a2, a3
+    vse8.v      v0, (a0)
+    add         a0, a0, a1
+    vse8.v      v1, (a0)
+    add         a0, a0, a1
+    vse8.v      v2, (a0)
+    add         a0, a0, a1
+    vse8.v      v3, (a0)
+    add         a0, a0, a1
+    bgtz        a4, 1b
+    ret
+endfunc
+
 #endif // BIT_DEPTH == 8
 
