@@ -811,6 +811,598 @@ endfunc
 weight_simple offsetadd, vsaddu.vv
 weight_simple offsetsub, vssubu.vv
 
+// ============================================================================
+// Main Dispatcher
+// ============================================================================
+// void mc_chroma( uint8_t *dst_u, uint8_t *dst_v, intptr_t i_dst_stride,
+//                 uint8_t *src, intptr_t i_src_stride,
+//                 int dx, int dy, int i_width, int i_height );
+function mc_chroma_rvv, export=1
+    ld      t6, 0(sp)           // i_height
+    sra     t0, a6, 3           // dy >> 3 (signed)
+    sra     t1, a5, 3           // dx >> 3 (signed)
+
+    mul     t0, t0, a4          // dy_int * src_stride
+    add     a3, a3, t0          // src += offset_y
+
+    sll     t1, t1, 1           // dx_int * 2 (interleaved UV)
+    add     a3, a3, t1          // src += offset_x
+
+    andi    a5, a5, 7           // dx &= 7
+    andi    a6, a6, 7           // dy &= 7
+
+    li      t0, 4
+    bgt     a7, t0, mc_chroma_w8_rvv
+    beq     a7, t0, mc_chroma_w4_rvv
+endfunc
+
+// Helper macro to calculate weights
+// Inputs: a5 = dx, a6 = dy
+// Outputs: t0=cA, t1=cB, t2=cC, t3=cD
+.macro CHROMA_MC_START
+    mul     t3, a5, a6          // cD = dx * dy
+    sll     t4, a5, 3           // dx * 8
+    li      t0, 64
+    sll     t5, a6, 3           // dy * 8
+    
+    add     t0, t0, t3          // 64 + cD
+    sub     t0, t0, t4          // 64 + cD - 8dx
+    sub     t0, t0, t5          // cA = (8-dx)*(8-dy)
+
+    sub     t1, t4, t3          // cB = 8dx - dxdy
+    sub     t2, t5, t3          // cC = 8dy - dxdy
+.endm
+
+// ---------------------------------------------------------------------------
+// mc_chroma_w2_rvv (Scalar optimized)
+// ---------------------------------------------------------------------------
+function mc_chroma_w2_rvv, export=0
+    CHROMA_MC_START             // t0=cA, t1=cB, t2=cC, t3=cD
+
+    ld      t5, 0(a3)           // Row 0
+    add     a3, a3, a4
+    li      a7, 32              // Rounding offset
+
+1:
+    ld      t4, 0(a3)           // Row 1
+    add     a3, a3, a4
+    addi    t6, t6, -1
+
+    // ---------------- U0 ----------------
+    andi    a5, t5, 0xFF        // U0_r0
+    mul     a5, a5, t0
+    srli    a6, t5, 16          // U1_r0
+    andi    a6, a6, 0xFF
+    mul     a6, a6, t1
+    add     a5, a5, a6
+
+    andi    a6, t4, 0xFF        // U0_r1
+    mul     a6, a6, t2
+    add     a5, a5, a6
+    srli    a6, t4, 16          // U1_r1
+    andi    a6, a6, 0xFF
+    mul     a6, a6, t3
+    add     a5, a5, a6
+
+    add     a5, a5, a7
+    srai    a5, a5, 6
+    sb      a5, 0(a0)           // dst_u[0]
+
+    // ---------------- U1 ----------------
+    srli    a5, t5, 16          // U1_r0
+    andi    a5, a5, 0xFF
+    mul     a5, a5, t0
+    srli    a6, t5, 32          // U2_r0
+    andi    a6, a6, 0xFF
+    mul     a6, a6, t1
+    add     a5, a5, a6
+
+    srli    a6, t4, 16          // U1_r1
+    andi    a6, a6, 0xFF
+    mul     a6, a6, t2
+    add     a5, a5, a6
+    srli    a6, t4, 32          // U2_r1
+    andi    a6, a6, 0xFF
+    mul     a6, a6, t3
+    add     a5, a5, a6
+
+    add     a5, a5, a7
+    srai    a5, a5, 6
+    sb      a5, 1(a0)           // dst_u[1]
+    add     a0, a0, a2
+
+    // ---------------- V0 ----------------
+    srli    a5, t5, 8           // V0_r0
+    andi    a5, a5, 0xFF
+    mul     a5, a5, t0
+    srli    a6, t5, 24          // V1_r0
+    andi    a6, a6, 0xFF
+    mul     a6, a6, t1
+    add     a5, a5, a6
+
+    srli    a6, t4, 8           // V0_r1
+    andi    a6, a6, 0xFF
+    mul     a6, a6, t2
+    add     a5, a5, a6
+    srli    a6, t4, 24          // V1_r1
+    andi    a6, a6, 0xFF
+    mul     a6, a6, t3
+    add     a5, a5, a6
+
+    add     a5, a5, a7
+    srai    a5, a5, 6
+    sb      a5, 0(a1)           // dst_v[0]
+
+    // ---------------- V1 ----------------
+    srli    a5, t5, 24          // V1_r0
+    andi    a5, a5, 0xFF
+    mul     a5, a5, t0
+    srli    a6, t5, 40          // V2_r0
+    andi    a6, a6, 0xFF
+    mul     a6, a6, t1
+    add     a5, a5, a6
+
+    srli    a6, t4, 24          // V1_r1
+    andi    a6, a6, 0xFF
+    mul     a6, a6, t2
+    add     a5, a5, a6
+    srli    a6, t4, 40          // V2_r1
+    andi    a6, a6, 0xFF
+    mul     a6, a6, t3
+    add     a5, a5, a6
+
+    add     a5, a5, a7
+    srai    a5, a5, 6
+    sb      a5, 1(a1)           // dst_v[1]
+    add     a1, a1, a2
+
+    mv      t5, t4
+    bnez    t6, 1b
+    ret
+endfunc
+
+// ---------------------------------------------------------------------------
+// mc_chroma_w4_rvv
+// ---------------------------------------------------------------------------
+function mc_chroma_w4_rvv, export=0
+    CHROMA_MC_START
+    csrwi   vxrm, 0             
+
+    // Prepare deinterleave indices
+    vsetivli zero, 5, e8, mf2, ta, ma
+    vid.v   v26                 // 0, 1, 2, 3, 4
+    vsll.vi v26, v26, 1         // 0, 2, 4, 6, 8 (U)
+    vadd.vi v27, v26, 1         // 1, 3, 5, 7, 9 (V)
+
+    beqz    a6, 4f
+    beqz    a5, 2f
+
+    // ========================================================================
+    // Case 1: 2D Interpolation (dx != 0 && dy != 0)
+    // ========================================================================
+    vsetivli zero, 4, e8, mf2, ta, ma
+    vmv.v.x  v28, t0            // cA
+    vmv.v.x  v29, t1            // cB
+    vmv.v.x  v30, t2            // cC
+    vmv.v.x  v31, t3            // cD
+    
+    // Load Row 0
+    vsetivli zero, 10, e8, m1, ta, ma
+    vle8.v   v12, (a3)
+    add      a3, a3, a4
+    
+    vrgather.vv v0, v12, v26    // U0
+    vrgather.vv v1, v12, v27    // V0
+    vslide1down.vx v2, v0, zero // U0_next
+    vslide1down.vx v3, v1, zero // V0_next
+
+1:  // Height loop
+    addi    t6, t6, -2
+
+    // Load Row 1
+    vsetivli zero, 10, e8, m1, ta, ma
+    vle8.v   v12, (a3)
+    add      a3, a3, a4
+    
+    vrgather.vv v4, v12, v26    // U1
+    vrgather.vv v5, v12, v27    // V1
+    vslide1down.vx v6, v4, zero // U1_next
+    vslide1down.vx v7, v5, zero // V1_next
+
+    // Calc Row 0
+    vsetivli zero, 4, e8, mf2, ta, ma
+    // U = U0*cA + U0n*cB + U1*cC + U1n*cD
+    vwmulu.vv   v16, v0, v28
+    vwmaccu.vv  v16, v29, v2
+    vwmaccu.vv  v16, v30, v4
+    vwmaccu.vv  v16, v31, v6
+
+    // V = V0*cA + V0n*cB + V1*cC + V1n*cD
+    vwmulu.vv   v18, v1, v28
+    vwmaccu.vv  v18, v29, v3
+    vwmaccu.vv  v18, v30, v5
+    vwmaccu.vv  v18, v31, v7
+
+    // Store Row 0
+    vnclipu.wi  v24, v16, 6
+    vnclipu.wi  v25, v18, 6
+    vse8.v      v24, (a0)
+    add         a0, a0, a2
+    vse8.v      v25, (a1)
+    add         a1, a1, a2
+
+    // Load Row 2
+    vsetivli zero, 10, e8, m1, ta, ma
+    vle8.v   v12, (a3)
+    add      a3, a3, a4
+
+    vrgather.vv v0, v12, v26
+    vrgather.vv v1, v12, v27
+    vslide1down.vx v2, v0, zero
+    vslide1down.vx v3, v1, zero
+
+    // Calc Row 1
+    vsetivli zero, 4, e8, mf2, ta, ma
+    // U
+    vwmulu.vv   v16, v4, v28
+    vwmaccu.vv  v16, v29, v6
+    vwmaccu.vv  v16, v30, v0
+    vwmaccu.vv  v16, v31, v2
+
+    // V
+    vwmulu.vv   v18, v5, v28
+    vwmaccu.vv  v18, v29, v7
+    vwmaccu.vv  v18, v30, v1
+    vwmaccu.vv  v18, v31, v3
+
+    // Store Row 1
+    vnclipu.wi  v24, v16, 6
+    vnclipu.wi  v25, v18, 6
+    vse8.v      v24, (a0)
+    add         a0, a0, a2
+    vse8.v      v25, (a1)
+    add         a1, a1, a2
+
+    bgtz    t6, 1b
+    ret
+
+    // ========================================================================
+    // Case 2: Vertical Only (dx == 0)
+    // ========================================================================
+2:
+    vsetivli zero, 4, e8, mf2, ta, ma
+    vmv.v.x  v28, t0            // cA
+    vmv.v.x  v30, t2            // cC
+
+    // Load Row 0
+    vsetivli zero, 8, e8, m1, ta, ma
+    vle8.v   v12, (a3)
+    add      a3, a3, a4
+    vrgather.vv v0, v12, v26
+    vrgather.vv v1, v12, v27
+
+3:  // Vertical loop
+    addi    t6, t6, -2
+
+    // Load Row 1
+    vsetivli zero, 8, e8, mf2, ta, ma
+    vle8.v   v12, (a3)
+    add      a3, a3, a4
+    vrgather.vv v4, v12, v26
+    vrgather.vv v5, v12, v27
+
+    // Calc Row 0
+    vsetivli zero, 4, e8, mf2, ta, ma
+    vwmulu.vv   v16, v0, v28
+    vwmaccu.vv  v16, v30, v4
+    vwmulu.vv   v18, v1, v28
+    vwmaccu.vv  v18, v30, v5
+
+    vnclipu.wi  v24, v16, 6
+    vnclipu.wi  v25, v18, 6
+    vse8.v      v24, (a0)
+    add         a0, a0, a2
+    vse8.v      v25, (a1)
+    add         a1, a1, a2
+
+    // Load Row 2
+    vsetivli zero, 8, e8, m1, ta, ma
+    vle8.v   v12, (a3)
+    add      a3, a3, a4
+    vrgather.vv v0, v12, v26
+    vrgather.vv v1, v12, v27
+
+    // Calc Row 1
+    vsetivli zero, 4, e8, mf2, ta, ma
+    vwmulu.vv   v16, v4, v28
+    vwmaccu.vv  v16, v30, v0
+    vwmulu.vv   v18, v5, v28
+    vwmaccu.vv  v18, v30, v1
+
+    vnclipu.wi  v24, v16, 6
+    vnclipu.wi  v25, v18, 6
+    vse8.v      v24, (a0)
+    add         a0, a0, a2
+    vse8.v      v25, (a1)
+    add         a1, a1, a2
+
+    bgtz    t6, 3b
+    ret
+
+    // ========================================================================
+    // Case 3: Horizontal Only (dy == 0)
+    // ========================================================================
+4:
+    vsetivli zero, 4, e8, mf2, ta, ma
+    vmv.v.x  v28, t0            // cA
+    vmv.v.x  v29, t1            // cB
+    vsetivli zero, 9, e8, m1, ta, ma
+
+5:  // Horizontal loop
+    addi    t6, t6, -2
+
+    // Load Row 0
+    vsetivli zero, 10, e8, m1, ta, ma
+    vle8.v   v12, (a3)
+    add      a3, a3, a4
+    vrgather.vv v0, v12, v26
+    vrgather.vv v1, v12, v27
+    vslide1down.vx v2, v0, zero 
+    vslide1down.vx v3, v1, zero 
+    
+    // Load Row 1
+    vle8.v   v12, (a3)
+    add      a3, a3, a4
+    vrgather.vv v4, v12, v26
+    vrgather.vv v5, v12, v27
+    vslide1down.vx v6, v4, zero 
+    vslide1down.vx v7, v5, zero 
+
+    // Calc Row 0
+    vsetivli zero, 4, e8, mf2, ta, ma
+    vwmulu.vv   v16, v0, v28
+    vwmaccu.vv  v16, v29, v2
+    vwmulu.vv   v18, v1, v28
+    vwmaccu.vv  v18, v29, v3
+
+    vnclipu.wi  v24, v16, 6
+    vnclipu.wi  v25, v18, 6
+    vse8.v      v24, (a0)
+    add         a0, a0, a2
+    vse8.v      v25, (a1)
+    add         a1, a1, a2
+
+    // Calc Row 1
+    vwmulu.vv   v16, v4, v28
+    vwmaccu.vv  v16, v29, v6
+    vwmulu.vv   v18, v5, v28
+    vwmaccu.vv  v18, v29, v7
+
+    vnclipu.wi  v24, v16, 6
+    vnclipu.wi  v25, v18, 6
+    vse8.v      v24, (a0)
+    add         a0, a0, a2
+    vse8.v      v25, (a1)
+    add         a1, a1, a2
+
+    bgtz    t6, 5b
+    ret
+endfunc
+
+// ---------------------------------------------------------------------------
+// mc_chroma_w8_rvv
+// ---------------------------------------------------------------------------
+function mc_chroma_w8_rvv, export=0
+    CHROMA_MC_START
+    csrwi   vxrm, 0             
+
+    beqz    a6, 4f              // dy == 0
+    beqz    a5, 2f              // dx == 0
+
+    // =========================================================
+    // Case 1: 2D Interpolation (dx != 0 && dy != 0)
+    // =========================================================
+    vsetivli zero, 8, e8, m1, ta, ma
+    vmv.v.x  v28, t0            // cA
+    vmv.v.x  v29, t1            // cB
+    vmv.v.x  v30, t2            // cC
+    vmv.v.x  v31, t3            // cD
+    
+    // Load Row 0
+    vsetivli zero, 9, e8, m1, ta, ma
+    vlseg2e8.v  v0, (a3)        // v0=U0, v1=V0
+    add         a3, a3, a4
+    vslide1down.vx v2, v0, zero // U0_next
+    vslide1down.vx v3, v1, zero // V0_next
+
+1:  // Height Loop
+    addi    t6, t6, -2
+
+    // Load Row 1
+    vsetivli zero, 9, e8, m1, ta, ma
+    vlseg2e8.v  v4, (a3)        // v4=U1, v5=V1
+    add         a3, a3, a4
+    vslide1down.vx v6, v4, zero // U1_next
+    vslide1down.vx v7, v5, zero // V1_next
+
+    // Calc Row 0
+    vsetivli zero, 8, e8, m1, ta, ma
+    // U
+    vwmulu.vv   v16, v0, v28
+    vwmaccu.vv  v16, v29, v2
+    vwmaccu.vv  v16, v30, v4
+    vwmaccu.vv  v16, v31, v6
+    // V
+    vwmulu.vv   v18, v1, v28
+    vwmaccu.vv  v18, v29, v3
+    vwmaccu.vv  v18, v30, v5
+    vwmaccu.vv  v18, v31, v7
+
+    // Store Row 0
+    vnclipu.wi  v24, v16, 6
+    vnclipu.wi  v25, v18, 6
+    vse8.v      v24, (a0)
+    add         a0, a0, a2
+    vse8.v      v25, (a1)
+    add         a1, a1, a2
+
+    // Load Row 2
+    vsetivli zero, 9, e8, m1, ta, ma
+    vlseg2e8.v  v0, (a3)        
+    add         a3, a3, a4
+    vslide1down.vx v2, v0, zero
+    vslide1down.vx v3, v1, zero
+
+    // Calc Row 1
+    vsetivli zero, 8, e8, m1, ta, ma
+    // U
+    vwmulu.vv   v16, v4, v28
+    vwmaccu.vv  v16, v29, v6        
+    vwmaccu.vv  v16, v30, v0    // Row 2 is new bottom
+    vwmaccu.vv  v16, v31, v2       
+    // V
+    vwmulu.vv   v18, v5, v28
+    vwmaccu.vv  v18, v29, v7        
+    vwmaccu.vv  v18, v30, v1        
+    vwmaccu.vv  v18, v31, v3       
+
+    // Store Row 1
+    vnclipu.wi  v24, v16, 6
+    vnclipu.wi  v25, v18, 6
+    vse8.v      v24, (a0)
+    add         a0, a0, a2
+    vse8.v      v25, (a1)
+    add         a1, a1, a2
+
+    bgtz    t6, 1b
+    ret
+
+    // =========================================================
+    // Case 2: Vertical Only (dx == 0)
+    // =========================================================
+2:   
+    vsetivli zero, 8, e8, m1, ta, ma
+    vid.v    v26            // 0..7
+    vsll.vi  v26, v26, 1    // U index
+    vadd.vi  v27, v26, 1    // V index
+
+    vmv.v.x  v28, t0        // cA
+    vmv.v.x  v30, t2        // cC
+
+    // Load Row 0
+    vsetivli zero, 16, e8, m1, ta, ma
+    vle8.v   v12, (a3)
+    add      a3, a3, a4
+    vrgather.vv v0, v12, v26
+    vrgather.vv v1, v12, v27
+
+3:  // Vertical loop
+    addi    t6, t6, -2
+
+    // Load Row 1
+    vsetivli zero, 16, e8, m2, ta, ma
+    vle8.v   v12, (a3)
+    add      a3, a3, a4
+
+    vsetivli zero, 8, e8, m1, ta, ma
+    vrgather.vv v4, v12, v26
+    vrgather.vv v5, v12, v27
+    
+    // Calc Row 0
+    vwmulu.vv   v16, v0, v28
+    vwmaccu.vv  v16, v30, v4
+    vwmulu.vv   v18, v1, v28
+    vwmaccu.vv  v18, v30, v5
+    
+    vnclipu.wi  v24, v16, 6
+    vnclipu.wi  v25, v18, 6
+    vse8.v      v24, (a0)
+    add         a0, a0, a2
+    vse8.v      v25, (a1)
+    add         a1, a1, a2
+
+    // Load Row 2
+    vsetivli zero, 16, e8, m2, ta, ma
+    vle8.v   v12, (a3)
+    add      a3, a3, a4
+
+    vsetivli zero, 8, e8, m1, ta, ma
+    vrgather.vv v0, v12, v26
+    vrgather.vv v1, v12, v27
+
+    // Calc Row 1
+    vwmulu.vv   v16, v4, v28
+    vwmaccu.vv  v16, v30, v0
+    vwmulu.vv   v18, v5, v28
+    vwmaccu.vv  v18, v30, v1
+
+    vnclipu.wi  v24, v16, 6
+    vnclipu.wi  v25, v18, 6
+    vse8.v      v24, (a0)
+    add         a0, a0, a2
+    vse8.v      v25, (a1)
+    add         a1, a1, a2
+
+    bgtz    t6, 3b
+    ret
+
+    // =========================================================
+    // Case 3: Horizontal Only (dy == 0)
+    // =========================================================
+4:
+    vsetivli zero, 8, e8, m1, ta, ma
+    vmv.v.x  v28, t0        // cA
+    vmv.v.x  v29, t1        // cB
+    
+    vsetivli zero, 9, e8, m1, ta, ma
+
+5:  // Horizontal loop
+    addi    t6, t6, -2
+
+    // Load Row 0
+    vlseg2e8.v  v0, (a3)
+    add         a3, a3, a4
+    vslide1down.vx v2, v0, zero 
+    vslide1down.vx v3, v1, zero 
+    
+    // Load Row 1
+    vlseg2e8.v  v4, (a3)
+    add         a3, a3, a4
+    vslide1down.vx v6, v4, zero 
+    vslide1down.vx v7, v5, zero 
+
+    // Calc Row 0
+    vsetivli zero, 8, e8, m1, ta, ma
+    vwmulu.vv   v16, v0, v28
+    vwmaccu.vv  v16, v29, v2
+    vwmulu.vv   v18, v1, v28
+    vwmaccu.vv  v18, v29, v3
+
+    vnclipu.wi  v24, v16, 6
+    vnclipu.wi  v25, v18, 6
+    vse8.v      v24, (a0)
+    add         a0, a0, a2
+    vse8.v      v25, (a1)
+    add         a1, a1, a2
+
+    // Calc Row 1
+    vwmulu.vv   v16, v4, v28
+    vwmaccu.vv  v16, v29, v6
+    vwmulu.vv   v18, v5, v28
+    vwmaccu.vv  v18, v29, v7
+
+    vnclipu.wi  v24, v16, 6
+    vnclipu.wi  v25, v18, 6
+    vse8.v      v24, (a0)
+    add         a0, a0, a2
+    vse8.v      v25, (a1)
+    add         a1, a1, a2
+
+    vsetivli zero, 9, e8, m1, ta, ma
+    bgtz    t6, 5b
+    ret
+endfunc
+
 // void mc_copy( uint8_t *dst, intptr_t dst_stride, uint8_t *src, intptr_t src_stride, int height )
 function mc_copy_w4_rvv, export=1
     vsetivli    zero, 4, e8, mf4, ta, ma

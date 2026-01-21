@@ -54,7 +54,10 @@ void x264_pixel_avg2_w8_rvv ( pixel *, intptr_t, pixel *, intptr_t, pixel *, int
 void x264_pixel_avg2_w16_rvv( pixel *, intptr_t, pixel *, intptr_t, pixel *, int );
 #define x264_pixel_avg2_w20_rvv x264_template(pixel_avg2_w20_rvv)
 void x264_pixel_avg2_w20_rvv( pixel *, intptr_t, pixel *, intptr_t, pixel *, int );
-
+#define x264_mc_chroma_rvv x264_template(mc_chroma_rvv)
+void x264_mc_chroma_rvv( uint8_t *dstu, uint8_t *dstv, intptr_t i_dst_stride,
+                        uint8_t *src, intptr_t i_src_stride,
+                        int mvx, int mvy, int i_width, int i_height );
 
 #define x264_mc_weight_w16_rvv x264_template(mc_weight_w16_rvv)
 #define x264_mc_weight_w16_nodenom_rvv x264_template(mc_weight_w16_nodenom_rvv)
@@ -236,6 +239,8 @@ void x264_mc_init_rvv( uint32_t cpu, x264_mc_functions_t *pf )
 
         pf->mc_luma = mc_luma_rvv;
         pf->get_ref = get_ref_rvv;
+
+        pf->mc_chroma = x264_mc_chroma_rvv;
     }
 #endif // !HIGH_BIT_DEPTH
 }
