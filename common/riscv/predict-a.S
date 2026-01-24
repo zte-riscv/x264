@@ -498,6 +498,42 @@ function predict_8x8c_h_rvv
     ret
 endfunc
 
+function predict_8x8c_v_rvv
+    li          t2, FDEC_STRIDE
+    vsetivli    zero, 8, e8, mf2, ta, ma
+    sub         t0, a0, t2
+    vle8.v      v8, (t0)
+.rept 8
+    vse8.v      v8, (a0)
+    add         a0, a0, t2
+.endr
+    ret
+endfunc
+
+function predict_8x8_v_rvv
+    li          t2, FDEC_STRIDE
+    addi        a1, a1, 16
+    vsetivli    zero, 8, e8, mf2, ta, ma
+    vle8.v      v0, (a1)
+.rept 8
+    vse8.v    v0, (a0)
+    add      a0, a0, t2
+.endr
+    ret
+endfunc
+
+function predict_8x16c_v_rvv
+    li          t2, FDEC_STRIDE
+    vsetivli    zero, 8, e8, mf2, ta, ma
+    sub         t0, a0, t2
+    vle8.v      v8, (t0)
+.rept 16
+    vse8.v      v8, (a0)
+    add         a0, a0, t2
+.endr
+    ret
+endfunc
+
 function predict_8x16c_dc_top_rvv
     addi        a2, a0, -32   
     vsetivli    zero, 8, e8, mf2, ta, ma

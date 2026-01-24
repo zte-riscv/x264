@@ -50,6 +50,7 @@
 #endif
 #if HAVE_RVV
 #   include "riscv/pixel.h"
+#   include "riscv/predict.h"
 #endif
 
 /****************************************************************************
@@ -541,6 +542,10 @@ INTRA_MBCMP_8x8(sa8d, _sse2,  _sse2 )
 INTRA_MBCMP_8x8( sad, _neon, _neon )
 INTRA_MBCMP_8x8(sa8d, _neon, _neon )
 #endif
+#if !HIGH_BIT_DEPTH && HAVE_RVV
+INTRA_MBCMP_8x8( sad, _rvv, _rvv )
+INTRA_MBCMP_8x8(sa8d, _rvv, _rvv )
+#endif
 
 #define INTRA_MBCMP( mbcmp, size, pred1, pred2, pred3, chroma, cpu, cpu2 )\
 static void intra_##mbcmp##_x3_##size##chroma##cpu( pixel *fenc, pixel *fdec, int res[3] )\
@@ -616,6 +621,16 @@ INTRA_MBCMP( sad,  8x16, dc, h,  v, c, _neon, _neon )
 INTRA_MBCMP(satd,  8x16, dc, h,  v, c, _neon, _neon )
 INTRA_MBCMP( sad, 16x16,  v, h, dc,  , _neon, _neon )
 INTRA_MBCMP(satd, 16x16,  v, h, dc,  , _neon, _neon )
+#endif
+#if !HIGH_BIT_DEPTH && HAVE_RVV
+INTRA_MBCMP( sad,  4x4,   v, h, dc,  , _rvv, _c )
+INTRA_MBCMP(satd,  4x4,   v, h, dc,  , _rvv, _c )
+INTRA_MBCMP( sad,  8x8,  dc, h,  v, c, _rvv, _rvv )
+INTRA_MBCMP(satd,  8x8,  dc, h,  v, c, _rvv, _rvv )
+INTRA_MBCMP( sad,  8x16, dc, h,  v, c, _rvv, _rvv )
+INTRA_MBCMP(satd,  8x16, dc, h,  v, c, _rvv, _rvv )
+INTRA_MBCMP( sad, 16x16,  v, h, dc,  , _rvv, _rvv )
+INTRA_MBCMP(satd, 16x16,  v, h, dc,  , _rvv, _rvv )
 #endif
 
 // No C implementation of intra_satd_x9. See checkasm for its behavior,
@@ -1659,6 +1674,17 @@ void x264_pixel_init( uint32_t cpu, x264_pixel_function_t *pixf )
 
         pixf->sa8d[PIXEL_8x8]   = x264_pixel_sa8d_8x8_rvv;
         pixf->sa8d[PIXEL_16x16]   = x264_pixel_sa8d_16x16_rvv;
+
+        pixf->intra_sad_x3_4x4    = intra_sad_x3_4x4_rvv;
+        pixf->intra_satd_x3_4x4   = intra_satd_x3_4x4_rvv;
+        pixf->intra_sad_x3_8x8    = intra_sad_x3_8x8_rvv;
+        pixf->intra_sa8d_x3_8x8   = intra_sa8d_x3_8x8_rvv;
+        pixf->intra_sad_x3_8x8c   = intra_sad_x3_8x8c_rvv;
+        pixf->intra_satd_x3_8x8c  = intra_satd_x3_8x8c_rvv;
+        pixf->intra_sad_x3_8x16c  = intra_sad_x3_8x16c_rvv;
+        pixf->intra_satd_x3_8x16c = intra_satd_x3_8x16c_rvv;
+        pixf->intra_sad_x3_16x16  = intra_sad_x3_16x16_rvv;
+        pixf->intra_satd_x3_16x16 = intra_satd_x3_16x16_rvv;
 
     }
 #endif
