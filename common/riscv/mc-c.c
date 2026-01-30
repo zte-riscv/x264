@@ -101,6 +101,18 @@ void x264_mc_copy_w4_rvv ( pixel *, intptr_t, pixel *, intptr_t, int );
 void x264_mc_copy_w8_rvv ( pixel *, intptr_t, pixel *, intptr_t, int );
 #define x264_mc_copy_w16_rvv x264_template(mc_copy_w16_rvv)
 void x264_mc_copy_w16_rvv( pixel *, intptr_t, pixel *, intptr_t, int );
+#define x264_mbtree_propagate_cost_rvv x264_template(mbtree_propagate_cost_rvv)
+void x264_mbtree_propagate_cost_rvv( int16_t *, uint16_t *, uint16_t *, uint16_t *, uint16_t *, float *, int );
+#define x264_memcpy_aligned_rvv x264_template(memcpy_aligned_rvv)
+void *x264_memcpy_aligned_rvv( void *, const void *, size_t );
+#define x264_memzero_aligned_rvv x264_template(memzero_aligned_rvv)
+void x264_memzero_aligned_rvv( void *, size_t );
+#define x264_plane_copy_swap_rvv x264_template(plane_copy_swap_rvv)
+void x264_plane_copy_swap_rvv( pixel *, intptr_t, pixel *, intptr_t, int, int );
+#define x264_plane_copy_deinterleave_rvv x264_template(plane_copy_deinterleave_rvv)
+void x264_plane_copy_deinterleave_rvv( pixel *, intptr_t, pixel *, intptr_t, pixel *, intptr_t, int, int );
+#define x264_plane_copy_deinterleave_rgb_rvv x264_template(plane_copy_deinterleave_rgb_rvv)
+void x264_plane_copy_deinterleave_rgb_rvv( pixel *, intptr_t, pixel *, intptr_t, pixel *, intptr_t, pixel *, intptr_t, int, int, int );
 
 static void (* const pixel_avg_wtab_rvv[6])( pixel *, intptr_t, pixel *, intptr_t, pixel *, int ) =
 {
@@ -241,6 +253,12 @@ void x264_mc_init_rvv( uint32_t cpu, x264_mc_functions_t *pf )
         pf->get_ref = get_ref_rvv;
 
         pf->mc_chroma = x264_mc_chroma_rvv;
+        pf->mbtree_propagate_cost = x264_mbtree_propagate_cost_rvv;
+        pf->memcpy_aligned  = x264_memcpy_aligned_rvv;
+        pf->memzero_aligned = x264_memzero_aligned_rvv;
+        pf->plane_copy_swap = x264_plane_copy_swap_rvv;
+        pf->plane_copy_deinterleave = x264_plane_copy_deinterleave_rvv;
+        pf->plane_copy_deinterleave_rgb = x264_plane_copy_deinterleave_rgb_rvv;
     }
 #endif // !HIGH_BIT_DEPTH
 }

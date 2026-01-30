@@ -1476,5 +1476,191 @@ function mc_copy_w16_rvv, export=1
     ret
 endfunc
 
+const F05, align=4
+    .float 0.5
+endconst
+
+function mbtree_propagate_cost_rvv, export=1
+    li          t3, 1
+    flw         ft0, (a5)
+    movrel      t1, F05
+    flw         ft1, 0(t1)
+    slli        t4, t3, 14
+    sub         t3, t4, t3
+    1:
+    vsetvli     t2, a6, e16, m1, ta, ma
+    vle16.v     v9, (a2)
+    vle16.v     v10, (a3)
+    vle16.v     v8, (a1)
+    vle16.v     v11, (a4)
+    sh1add      a1, t2, a1
+    sh1add      a2, t2, a2
+    sh1add      a3, t2, a3
+    sh1add      a4, t2, a4
+    vand.vx     v10, v10, t3
+    vfwcvt.f.xu.v v20, v9
+    vminu.vv    v12, v9, v10
+    vfwcvt.f.xu.v v22, v8
+    vsub.vv     v16, v9, v12
+    vwmulu.vv   v14, v9, v11
+    vfwcvt.f.x.v v24, v16
+    vsetvli     t2, a6, e32, m2, ta, ma
+    vfcvt.f.xu.v v26, v14
+    vfmacc.vf   v22, ft0, v26
+    vfmul.vv    v28, v22, v24
+    vfdiv.vv    v30, v28, v20
+    vfadd.vf    v30, v30, ft1
+    vsetvli     t2, a6, e16, m1, ta, ma
+    sub         a6, a6, t2
+    vfncvt.rtz.x.f.w v18, v30
+    vse16.v     v18, (a0)
+    sh1add      a0, t2, a0
+    bgtz        a6, 1b
+    ret
+endfunc
+
+function memcpy_aligned_rvv, export=1
+    1:
+    vsetvli     t0, a2, e8, m1, ta, ma
+    vle8.v      v8, (a1)
+    vse8.v      v8, (a0)
+    add         a1, a1, t0
+    add         a0, a0, t0
+    sub         a2, a2, t0
+    bgtz        a2, 1b
+    ret
+endfunc
+
+function memzero_aligned_rvv, export=1
+    vsetvli     t0, zero, e8, m1, ta, ma
+    vmv.v.x     v8, x0
+    1:
+    vsetvli     t0, a1, e8, m1, ta, ma
+    vse8.v      v8, (a0)
+    add         a0, a0, t0
+    sub         a1, a1, t0
+    bgtz        a1, 1b
+    ret
+endfunc
+
+function plane_copy_swap_rvv, export=1
+    slli        t3, a4, 1
+    sub         a1, a1, t3
+    sub         a3, a3, t3
+    1:
+    add         t0, a4, x0
+    2:
+    vsetvli     t1, t0, e8, m1, ta, ma
+    slli        t2, t1, 1
+    vlseg2e8.v  v8, (a2)
+    add         a2, a2, t2
+    vmv.v.v     v10, v9
+    vmv.v.v     v11, v8
+    vsseg2e8.v  v10, (a0)
+    add         a0, a0, t2
+    sub         t0, t0, t1
+    bgtz        t0, 2b
+    add         a0, a0, a1
+    add         a2, a2, a3
+    addi        a5, a5,  -1
+    bgtz        a5, 1b
+    ret
+endfunc
+
+function plane_copy_deinterleave_rvv, export=1
+    slli        t2, a6, 1
+    sub         a1, a1, a6
+    sub         a3, a3, a6
+    sub         a5, a5, t2
+    vsetvli     t0, zero, e8, m1, ta, ma
+    vid.v       v0
+    vand.vi     v0, v0, 1
+    vmseq.vi    v2, v0, 0
+    vmseq.vi    v4, v0, 1
+    1:
+    add         t1, t2, x0
+    2:
+    vsetvli     t0, t1, e8, m1, ta, ma
+    vle8.v      v8, (a4)
+    add         a4, a4, t0
+    sub         t1, t1, t0
+    vcompress.vm v12, v8, v2
+    vcompress.vm v14, v8, v4
+    srli        t0, t0, 1
+    vsetvli     t0, t0, e8, mf2, ta, ma
+    vse8.v      v12, (a0)
+    vse8.v      v14, (a2)
+    add         a0, a0, t0
+    add         a2, a2, t0
+    bgtz        t1, 2b
+    addi        a7, a7, -1
+    add         a4, a4, a5
+    add         a0, a0, a1
+    add         a2, a2, a3
+    bgtz        a7, 1b
+    ret
+endfunc
+
+function plane_copy_deinterleave_rgb_rvv, export=1
+    ld          t0, 0(sp)
+    ld          t1, 8(sp)
+    ld          t2, 16(sp)
+    li          t3, 3
+    sub         a1, a1, t1
+    sub         a3, a3, t1
+    sub         a5, a5, t1
+    bne         t0, t3, pw4
+    mul         t3, t1, t3
+    sub         a7, a7, t3
+    pw3_1:
+    add         t5, t1, x0
+    pw3_2:
+    vsetvli     t4, t5, e8, m1, ta, ma
+    slli        t6, t4, 1
+    add         t6, t6, t4
+    vlseg3e8.v  v3, (a6)
+    add         a6, a6, t6
+    vse8.v      v3, (a0)
+    vse8.v      v4, (a2)
+    vse8.v      v5, (a4)
+    add         a0, a0, t4
+    add         a2, a2, t4
+    add         a4, a4, t4
+    sub         t5, t5, t4
+    bgtz        t5, pw3_2
+    add         a0, a0, a1
+    add         a2, a2, a3
+    add         a4, a4, a5
+    add         a6, a6, a7
+    addi        t2, t2, -1
+    bgtz        t2, pw3_1
+    ret
+    pw4:
+    slli        t3, t1, 2
+    sub         a7, a7, t3
+    pw4_1:
+    add         t5, t1, x0
+    pw4_2:
+    vsetvli     t4, t5, e8, m1, ta, ma
+    slli        t6, t4, 2
+    vlseg4e8.v  v4, (a6)
+    add         a6, a6, t6
+    vse8.v      v4, (a0)
+    vse8.v      v5, (a2)
+    vse8.v      v6, (a4)
+    add         a0, a0, t4
+    add         a2, a2, t4
+    add         a4, a4, t4
+    sub         t5, t5, t4
+    bgtz        t5, pw4_2
+    add         a0, a0, a1
+    add         a2, a2, a3
+    add         a4, a4, a5
+    add         a6, a6, a7
+    addi        t2, t2, -1
+    bgtz        t2, pw4_1
+    ret
+endfunc
+
 #endif // BIT_DEPTH == 8
 
