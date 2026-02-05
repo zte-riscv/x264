@@ -1476,5 +1476,41 @@ function mc_copy_w16_rvv, export=1
     ret
 endfunc
 
+function store_interleave_chroma_rvv, export=1
+    li          t0, FDEC_STRIDE
+
+    vsetivli    zero, 16, e8, m1, ta, ma
+    vid.v       v16
+    vsrl.vi     v17, v16, 1
+    vand.vi     v18, v16, 1
+    vsll.vi     v18, v18, 3
+    vadd.vv     v22, v17, v18   // v22 = [0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15]
+1:
+    vle8.v      v0, (a2)        // load U
+    vle8.v      v1, (a3)        // load V
+    add         a2, a2, t0
+    add         a3, a3, t0
+
+    vle8.v      v2, (a2)
+    vle8.v      v3, (a3)
+    add         a2, a2, t0
+    add         a3, a3, t0
+
+    vslideup.vi v0, v1, 8
+    vrgather.vv v4, v0, v22     // v4 = [U0, V0, U1, V1, ... , U7, V7]
+    vse8.v      v4, (a0)        // store UV
+    add         a0, a0, a1
+
+    vslideup.vi v2, v3, 8
+    vrgather.vv v5, v2, v22
+    vse8.v      v5, (a0)
+    add         a0, a0, a1
+
+    addi        a4, a4, -2
+    bgtz        a4, 1b
+
+    ret
+endfunc
+
 #endif // BIT_DEPTH == 8
 

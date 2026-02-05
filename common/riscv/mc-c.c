@@ -101,7 +101,8 @@ void x264_mc_copy_w4_rvv ( pixel *, intptr_t, pixel *, intptr_t, int );
 void x264_mc_copy_w8_rvv ( pixel *, intptr_t, pixel *, intptr_t, int );
 #define x264_mc_copy_w16_rvv x264_template(mc_copy_w16_rvv)
 void x264_mc_copy_w16_rvv( pixel *, intptr_t, pixel *, intptr_t, int );
-
+#define x264_store_interleave_chroma_rvv x264_template(store_interleave_chroma_rvv)
+void x264_store_interleave_chroma_rvv( pixel *dst, intptr_t i_dst, pixel *srcu, pixel *srcv, int height );
 static void (* const pixel_avg_wtab_rvv[6])( pixel *, intptr_t, pixel *, intptr_t, pixel *, int ) =
 {
     NULL,
@@ -239,7 +240,7 @@ void x264_mc_init_rvv( uint32_t cpu, x264_mc_functions_t *pf )
 
         pf->mc_luma = mc_luma_rvv;
         pf->get_ref = get_ref_rvv;
-
+        pf->store_interleave_chroma = x264_store_interleave_chroma_rvv;
         pf->mc_chroma = x264_mc_chroma_rvv;
     }
 #endif // !HIGH_BIT_DEPTH
