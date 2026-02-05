@@ -1549,6 +1549,7 @@ function plane_copy_core_rvv, export=1
 
     ret
 endfunc
+
 function store_interleave_chroma_rvv, export=1
     li          t0, FDEC_STRIDE
 
@@ -1581,6 +1582,8 @@ function store_interleave_chroma_rvv, export=1
 
     addi        a4, a4, -2
     bgtz        a4, 1b
+    ret
+endfunc 
 
 function load_deinterleave_chroma_fenc_rvv, export=1
     li          t0, FENC_STRIDE/2
@@ -1619,6 +1622,8 @@ load_deinterleave_chroma_rvv:
     vsetivli    zero, 16, e8, m1, ta, ma
     addi        a3, a3, -2
     bgtz        a3, 1b
+    ret
+endfunc
 
 function frame_init_lowres_core_rvv, export=1
     ld          t0, 0(sp)              // height
