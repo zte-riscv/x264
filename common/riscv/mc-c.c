@@ -101,7 +101,10 @@ void x264_mc_copy_w4_rvv ( pixel *, intptr_t, pixel *, intptr_t, int );
 void x264_mc_copy_w8_rvv ( pixel *, intptr_t, pixel *, intptr_t, int );
 #define x264_mc_copy_w16_rvv x264_template(mc_copy_w16_rvv)
 void x264_mc_copy_w16_rvv( pixel *, intptr_t, pixel *, intptr_t, int );
-
+#define x264_load_deinterleave_chroma_fdec_rvv x264_template(load_deinterleave_chroma_fdec_rvv)
+void x264_load_deinterleave_chroma_fdec_rvv( pixel *dst, pixel *src, intptr_t i_src, int height );
+#define x264_load_deinterleave_chroma_fenc_rvv x264_template(load_deinterleave_chroma_fenc_rvv)
+void x264_load_deinterleave_chroma_fenc_rvv( pixel *dst, pixel *src, intptr_t i_src, int height );
 static void (* const pixel_avg_wtab_rvv[6])( pixel *, intptr_t, pixel *, intptr_t, pixel *, int ) =
 {
     NULL,
@@ -239,7 +242,8 @@ void x264_mc_init_rvv( uint32_t cpu, x264_mc_functions_t *pf )
 
         pf->mc_luma = mc_luma_rvv;
         pf->get_ref = get_ref_rvv;
-
+        pf->load_deinterleave_chroma_fdec = x264_load_deinterleave_chroma_fdec_rvv;
+        pf->load_deinterleave_chroma_fenc = x264_load_deinterleave_chroma_fenc_rvv;
         pf->mc_chroma = x264_mc_chroma_rvv;
     }
 #endif // !HIGH_BIT_DEPTH
