@@ -1476,6 +1476,44 @@ function mc_copy_w16_rvv, export=1
     ret
 endfunc
 
+function load_deinterleave_chroma_fenc_rvv, export=1
+    li          t0, FENC_STRIDE/2
+    j           load_deinterleave_chroma_rvv
+endfunc
+
+function load_deinterleave_chroma_fdec_rvv, export=1
+    li          t0, FDEC_STRIDE/2
+load_deinterleave_chroma_rvv:
+    vsetivli    zero, 16, e8, m1, ta, ma  
+
+    vid.v       v16                             // v4 = [0, 1, 2, ..., 15]
+    vsll.vi     v17, v16, 1                     // v5 = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+    vadd.vi     v18, v17, 1                     // v6 = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31]
+1:  
+    vle8.v      v0, (a1)
+    add         a1, a1, a2
+    vrgather.vv v2, v0, v17                     // v2 = [U0, U1, U2, U3, U4, U5, U6, U7, ?, ?, ?, ?, ?, ?, ?, ?]
+    vrgather.vv v3, v0, v18                     // v3 = [V0, V1, V2, V3, V4, V5, V6, V7, ?, ?, ?, ?, ?, ?, ?, ?]
+
+    vle8.v  v4, (a1)
+    add   a1, a1, a2
+    vrgather.vv v5, v4, v17
+    vrgather.vv v6, v4, v18
+
+    vsetivli    zero, 8, e8, mf2, ta, ma
+    vse8.v      v2, (a0)
+    add         a0, a0, t0
+    vse8.v      v3, (a0)
+    add         a0, a0, t0
+    vse8.v  v5, (a0)
+    add         a0, a0, t0
+    vse8.v  v6, (a0)
+    add         a0, a0, t0
+
+    vsetivli    zero, 16, e8, m1, ta, ma
+    addi        a3, a3, -2
+    bgtz        a3, 1b
+
 function frame_init_lowres_core_rvv, export=1
     ld          t0, 0(sp)              // height
     csrwi       vxrm, 0
@@ -1601,7 +1639,7 @@ function frame_init_lowres_core_rvv, export=1
     add         a3, a3, t1
     add         a4, a4, t1
     bgtz        t0, 1b
-
+    
     ret
 endfunc
 
