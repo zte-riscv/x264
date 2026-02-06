@@ -1754,5 +1754,46 @@ function frame_init_lowres_core_rvv, export=1
     ret
 endfunc
 
+function plane_copy_interleave_core_rvv, export=1
+
+    addi        t0, a6, 15
+    andi        t0, t0, -16
+    li          t3, 32
+
+    li          t5, 0xaaaaaaaa
+    vmv.v.x     v0, t5
+
+    slli        t1, t0, 1
+    sub         a1, a1, t1
+    sub         a3, a3, t0
+    sub         a5, a5, t0
+1:
+    vsetivli    zero, 16, e8, m1, ta, ma
+    vle8.v      v8, (a2)
+    vle8.v      v2, (a4)
+    addi        a2, a2, 16
+    addi        a4, a4, 16
+
+    vsetvli    zero, t3, e16, m2, ta, ma
+    vzext.vf2   v4, v8
+    vzext.vf2   v6, v2
+    vsetvli    zero, t3, e8, m2, ta, mu
+    vslideup.vi v4, v6, 1, v0.t
+
+    vse8.v      v4, (a0)
+    addi        a0, a0, 32
+    addi        t0, t0, -16
+    bgtz        t0, 1b
+    
+    add         a0, a0, a1
+    add         a2, a2, a3
+    add         a4, a4, a5
+    mv          t0, a6
+    addi        a7, a7, -1
+    bgtz        a7, 1b
+    
+    ret
+endfunc
+
 #endif // BIT_DEPTH == 8
 
