@@ -58,7 +58,10 @@ void x264_pixel_avg2_w20_rvv( pixel *, intptr_t, pixel *, intptr_t, pixel *, int
 void x264_mc_chroma_rvv( uint8_t *dstu, uint8_t *dstv, intptr_t i_dst_stride,
                         uint8_t *src, intptr_t i_src_stride,
                         int mvx, int mvy, int i_width, int i_height );
-
+#define x264_hpel_filter_rvv x264_template(hpel_filter_rvv)
+void x264_hpel_filter_rvv( pixel *dsth, pixel *dstv, pixel *dstc,
+                            pixel *src, intptr_t stride, int width,
+                            int height, int16_t *buf );
 #define x264_mc_weight_w16_rvv x264_template(mc_weight_w16_rvv)
 #define x264_mc_weight_w16_nodenom_rvv x264_template(mc_weight_w16_nodenom_rvv)
 #define x264_mc_weight_w16_offsetadd_rvv x264_template(mc_weight_w16_offsetadd_rvv)
@@ -263,6 +266,7 @@ void x264_mc_init_rvv( uint32_t cpu, x264_mc_functions_t *pf )
         pf->load_deinterleave_chroma_fenc = x264_load_deinterleave_chroma_fenc_rvv;
         pf->frame_init_lowres_core = x264_frame_init_lowres_core_rvv;
         pf->mc_chroma = x264_mc_chroma_rvv;
+        pf->hpel_filter = x264_hpel_filter_rvv;
     }
 #endif // !HIGH_BIT_DEPTH
 }

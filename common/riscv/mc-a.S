@@ -1795,5 +1795,117 @@ function plane_copy_interleave_core_rvv, export=1
     ret
 endfunc
 
+function hpel_filter_rvv, export=1
+    csrwi   vxrm, 0
+
+    slli    t0, a4, 1
+    sub     t1, a3, t0
+    addi    t3, t1, -2
+
+    li      t2, 20
+    vsetivli zero, 16, e16, m2, ta, ma
+    vmv.v.x v0, t2    # v0 = {20, 20, ...}
+    vmv.v.i v2, 5    # v2 = {5, 5, ...} 
+
+2:  # Label: Outer Loop Start
+    mv      t4, a5              # t4 = current line width counter
+    mv      t5, t3              # t5 = current line src read pointer
+    mv      t0, a0              # t0 = current line dsth moving pointer
+    mv      t1, a1              # t1 = current line dstv moving pointer
+    mv      t2, a2              # t2 = current line dstc moving pointer
+
+1:  # Label: Inner Loop Start
+    mv      t6, t5
+    vsetivli zero, 16, e8, m1, ta, ma
+    
+    vle8.v  v16, (t6)           # Row -2
+    add     t6, t6, a4
+    vle8.v  v17, (t6)           # Row -1
+    add     t6, t6, a4
+    vle8.v  v18, (t6)           # Row 0
+    add     t6, t6, a4
+    vle8.v  v19, (t6)           # Row +1
+    add     t6, t6, a4
+    vle8.v  v20, (t6)           # Row +2
+    add     t6, t6, a4
+    vle8.v  v21, (t6)           # Row +3
+
+    # --- Horizontal sliding window ---
+    vslidedown.vi v22, v18, 1
+    vslidedown.vi v23, v18, 2
+    vslidedown.vi v24, v18, 3
+    vslidedown.vi v25, v18, 4
+    vslidedown.vi v26, v18, 5
+
+    # Vertical pre-add
+    vwaddu.vv   v4, v16, v21    # v4 (A+F)
+    vwaddu.vv   v8, v17, v20    # v8 (B+E)
+    vwaddu.vv   v10, v18, v19   # v10 (C+D)
+
+    # Horizontal pre-add
+    vwaddu.vv   v6, v18, v26    # v6 (A+F)
+    vwaddu.vv   v12, v22, v25    # v12 (B+E)
+    vwaddu.vv   v14, v23, v24   # v14 (C+D)
+
+    vsetivli zero, 16, e16, m2, ta, ma
+    # Vertical fused multiply-add/subtract (Fused Ops)
+    vmacc.vv    v4, v0, v10    # v4 += 20 * (C+D)
+    vnmsac.vv   v4, v2, v8     # v4 -= 5 * (B+E)
+
+    # Horizontal fused multiply-add/subtract (Fused Ops)
+    vmacc.vv    v6, v0, v14    # v6 += 20 * (C+D)
+    vnmsac.vv   v6, v2, v12    # v6 -= 5 * (B+E)
+
+    vslidedown.vi v8, v4, 2
+    vmax.vx v26, v8, zero        # DSTV clamp
+    vmax.vx v28, v6, zero        # DSTH clamp
+
+    # --- Diagonal filtering ---
+    vslidedown.vi v6, v4, 1
+    vslidedown.vi v10, v4, 3
+    vslidedown.vi v12, v4, 4
+    vslidedown.vi v14, v4, 5
+    
+    vadd.vv     v18, v6, v12   # B + E (common term)
+    vadd.vv     v16, v4, v14   # A + F
+    vsub.vv     v16, v16, v18  # (A+F) - (B+E)
+    vsra.vi     v16, v16, 2    # result1
+    vadd.vv     v20, v8, v10   # C + D (result2)
+    vsub.vv     v22, v20, v18  # (C+D) - (B+E)
+    vadd.vv     v22, v22, v16  # result2 + result1
+    vsra.vi     v22, v22, 2    # >> 2
+    vadd.vv     v22, v22, v20  # directly add (C+D) sum, save one vadd
+    vmax.vx     v22, v22, zero # DSTC clamp
+
+    vsetivli zero, 10, e8, m1, ta, ma
+    vnclipu.wi v31, v26, 5
+    vse8.v  v31, (t1)           # Store DSTV
+    addi    t1, t1, 10
+
+    vnclipu.wi v30, v28, 5
+    vse8.v  v30, (t0)           # Store DSTH
+    addi    t0, t0, 10
+
+    vnclipu.wi v22, v22, 6
+    vse8.v  v22, (t2)           # Store DSTC
+    addi    t2, t2, 10
+
+    # --- Inner loop control ---
+    addi    t5, t5, 10           
+    addi    t4, t4, -10          
+    bgt     t4, zero, 1b
+
+    # --- Outer row update ---
+    add     a0, a0, a4
+    add     a1, a1, a4
+    add     a2, a2, a4
+    add     t3, t3, a4
+
+    addi    a6, a6, -1
+    bgt     a6, zero, 2b
+    
+    ret
+endfunc
+
 #endif // BIT_DEPTH == 8
 
