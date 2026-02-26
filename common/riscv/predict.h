@@ -55,7 +55,12 @@ void x264_predict_8x8_hd_rvv( uint8_t *src, uint8_t edge[36] );
 void x264_predict_8x8_hu_rvv( uint8_t *src, uint8_t edge[36] );
 #define x264_predict_8x8_h_rvv x264_template(predict_8x8_h_rvv)
 void x264_predict_8x8_h_rvv( uint8_t *src, uint8_t edge[36] );
-
+#define x264_predict_8x8c_v_rvv x264_template(predict_8x8c_v_rvv)
+void x264_predict_8x8c_v_rvv( uint8_t *src );
+#define x264_predict_8x8_v_rvv x264_template(predict_8x8_v_rvv)
+void x264_predict_8x8_v_rvv( uint8_t *src, uint8_t edge[36] );
+#define x264_predict_8x16c_v_rvv x264_template(predict_8x16c_v_rvv)
+void x264_predict_8x16c_v_rvv( uint8_t *src );
 
 #define x264_predict_8x8c_dc_rvv x264_template(predict_8x8c_dc_rvv)
 void x264_predict_8x8c_dc_rvv( uint8_t *src );

@@ -4,6 +4,7 @@
  * Copyright (C) 2014-2024 x264 project
  *
  * Authors: Qian Jiayan <qianjiayan.1@bytedance.com>
+ *          Sun Fang <fangsun@linux.alibaba.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1521,7 +1522,7 @@ endfunc
 
 function memcpy_aligned_rvv, export=1
     1:
-    vsetvli     t0, a2, e8, m1, ta, ma
+    vsetvli     t0, a2, e8, m4, ta, ma
     vle8.v      v8, (a1)
     vse8.v      v8, (a0)
     add         a1, a1, t0
@@ -1532,10 +1533,10 @@ function memcpy_aligned_rvv, export=1
 endfunc
 
 function memzero_aligned_rvv, export=1
-    vsetvli     t0, zero, e8, m1, ta, ma
+    vsetvli     t0, zero, e8, m4, ta, ma
     vmv.v.x     v8, x0
     1:
-    vsetvli     t0, a1, e8, m1, ta, ma
+    vsetvli     t0, a1, e8, m4, ta, ma
     vse8.v      v8, (a0)
     add         a0, a0, t0
     sub         a1, a1, t0
@@ -1659,6 +1660,437 @@ function plane_copy_deinterleave_rgb_rvv, export=1
     add         a6, a6, a7
     addi        t2, t2, -1
     bgtz        t2, pw4_1
+    ret
+endfunc
+
+function plane_copy_core_rvv, export=1
+0:
+    mv t5, a2
+    mv t6, a4
+
+    add     t0, t5, t6                # srcend
+    add     t1, a0, t6                # dstend
+
+    vsetivli zero, 16, e8, m1, ta, ma
+    vle8.v  v3, (t5)                  # ldr D_q, [src]
+
+    andi    t2, t5, 15
+
+    li  t3, 16
+    sub t3, t3, t2
+    add t5, t5, t3
+    add a6, a0, t3
+    sub t6, t6, t3
+
+    vse8.v  v3, (a0)                  # str D_q, [dstin]
+
+    vsetvli zero, t6, e8, m2, ta, ma
+    vle8.v  v0, (t5)                  # A_q B_q
+   
+    addi    t4, t5, 32
+    vle8.v  v2, (t4)                  # C_q D_q
+    
+    li      t4, 128                   # 128
+    sub     t6, t6, t4
+    blez    t6, 3f
+2:
+
+    vse8.v  v0, (a6)                # A_q B_q
+   
+    addi    t4, t5, 64
+    vle8.v  v0, (t4)
+
+    addi    t4, a6, 32
+    vse8.v  v2, (t4)
+
+    addi    t4, t5, 96
+    vle8.v  v2, (t4)
+ 
+    addi    t5, t5, 64
+    addi    a6, a6, 64
+    addi    t6, t6, -64
+    bgtz    t6, 2b
+
+3:
+    addi    t4, t0, -64
+    vle8.v  v4, (t4)                  # E_q # F_q
+
+    vse8.v  v0, (a6)                  # A_q B_q
+
+    addi    t4, t0, -32
+    vle8.v  v0, (t4)                  
+              
+    addi    t4, a6, 32                # C_q D_q
+    vse8.v  v2, (t4)                  
+
+    addi    t4, t1, -64
+    vse8.v  v4, (t4)
+
+    addi    t4, t1, -32
+    vse8.v  v0, (t4)
+
+    add     a0, a0, a1
+    add     a2, a2, a3
+    addi    a5, a5, -1
+    bgtz    a5, 0b
+
+    ret
+endfunc
+
+function store_interleave_chroma_rvv, export=1
+    li          t0, FDEC_STRIDE
+
+    vsetivli    zero, 16, e8, m1, ta, ma
+    vid.v       v16
+    vsrl.vi     v17, v16, 1
+    vand.vi     v18, v16, 1
+    vsll.vi     v18, v18, 3
+    vadd.vv     v22, v17, v18   // v22 = [0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15]
+1:
+    vle8.v      v0, (a2)        // load U
+    vle8.v      v1, (a3)        // load V
+    add         a2, a2, t0
+    add         a3, a3, t0
+
+    vle8.v      v2, (a2)
+    vle8.v      v3, (a3)
+    add         a2, a2, t0
+    add         a3, a3, t0
+
+    vslideup.vi v0, v1, 8
+    vrgather.vv v4, v0, v22     // v4 = [U0, V0, U1, V1, ... , U7, V7]
+    vse8.v      v4, (a0)        // store UV
+    add         a0, a0, a1
+
+    vslideup.vi v2, v3, 8
+    vrgather.vv v5, v2, v22
+    vse8.v      v5, (a0)
+    add         a0, a0, a1
+
+    addi        a4, a4, -2
+    bgtz        a4, 1b
+    ret
+endfunc 
+
+function load_deinterleave_chroma_fenc_rvv, export=1
+    li          t0, FENC_STRIDE/2
+    j           load_deinterleave_chroma_rvv
+endfunc
+
+function load_deinterleave_chroma_fdec_rvv, export=1
+    li          t0, FDEC_STRIDE/2
+load_deinterleave_chroma_rvv:
+    vsetivli    zero, 16, e8, m1, ta, ma  
+
+    vid.v       v16                             // v4 = [0, 1, 2, ..., 15]
+    vsll.vi     v17, v16, 1                     // v5 = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+    vadd.vi     v18, v17, 1                     // v6 = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31]
+1:  
+    vle8.v      v0, (a1)
+    add         a1, a1, a2
+    vrgather.vv v2, v0, v17                     // v2 = [U0, U1, U2, U3, U4, U5, U6, U7, ?, ?, ?, ?, ?, ?, ?, ?]
+    vrgather.vv v3, v0, v18                     // v3 = [V0, V1, V2, V3, V4, V5, V6, V7, ?, ?, ?, ?, ?, ?, ?, ?]
+
+    vle8.v  v4, (a1)
+    add   a1, a1, a2
+    vrgather.vv v5, v4, v17
+    vrgather.vv v6, v4, v18
+
+    vsetivli    zero, 8, e8, mf2, ta, ma
+    vse8.v      v2, (a0)
+    add         a0, a0, t0
+    vse8.v      v3, (a0)
+    add         a0, a0, t0
+    vse8.v  v5, (a0)
+    add         a0, a0, t0
+    vse8.v  v6, (a0)
+    add         a0, a0, t0
+
+    vsetivli    zero, 16, e8, m1, ta, ma
+    addi        a3, a3, -2
+    bgtz        a3, 1b
+    ret
+endfunc
+
+function frame_init_lowres_core_rvv, export=1
+    ld          t0, 0(sp)              // height
+    csrwi       vxrm, 0
+    sub         t1, a6, a7             // dst_stride - width
+    andi        t1, t1, -16            // align to 16 bytes
+    li          t6, 32
+    vsetvli     zero, t6, e8, m2, ta, ma
+    vid.v       v16                    // generate indices [0..31]
+    vsll.vi     v12, v16, 1            // even indices [0,2,4,...]
+    vadd.vi     v14, v12, 1            // odd indices [1,3,5,...]
+1:  // outer loop: process each row
+    mv          t2, a7
+    mv          t3, a0                 // src0
+    add         t4, a0, a5             // src1 = src0 + stride
+    slli        t5, a5, 1
+    add         t5, a0, t5             // src2 = src0 + 2*stride
+    vsetvli    zero, t6, e8, m2, ta, ma
+    vle8.v      v10, (t3)              // load src0[0:31]
+    vle8.v      v26, (t4)              // load src1[0:31]
+    vle8.v      v28, (t5)              // load src2[0:31]
+    vrgather.vv v0, v10, v12           // extract even pixels from src0
+    vrgather.vv v6, v10, v14           // extract odd pixels from src0
+    vrgather.vv v2, v26, v12           // extract even pixels from src1
+    vrgather.vv v8, v26, v14           // extract odd pixels from src1
+    vrgather.vv v4, v28, v12           // extract even pixels from src2
+    vrgather.vv v10, v28, v14          // extract odd pixels from src2
+    addi        t3, t3, 32
+    addi        t4, t4, 32
+    addi        t5, t5, 32
+
+    vsetivli    zero, 16, e8, m1, ta, ma
+    vaaddu.vv   v20, v0, v2            // avg(src0_even, src1_even)
+    vaaddu.vv   v22, v2, v4            // avg(src1_even, src2_even)
+
+2:  // inner loop: process 16 output pixels
+    addi        t2, t2, -16
+    vaaddu.vv   v21, v6, v8            // avg(src0_odd, src1_odd)
+    vaaddu.vv   v23, v8, v10           // avg(src1_odd, src2_odd)
+    vsetvli zero, t6, e8, m2, ta, ma
+    vle8.v      v10, (t3)              // prefetch next src0
+    vle8.v      v26, (t4)              // prefetch next src1
+    vle8.v      v28, (t5)              // prefetch next src2
+    vrgather.vv v0, v10, v12
+    vrgather.vv v6, v10, v14
+    vrgather.vv v2, v26, v12
+    vrgather.vv v8, v26, v14
+    vrgather.vv v4, v28, v12
+    vrgather.vv v10, v28, v14
+    addi        t3, t3, 32
+    addi        t4, t4, 32
+    addi        t5, t5, 32
+    vsetivli    zero, 16, e8, m1, ta, ma
+    vaaddu.vv   v30, v0, v2            // next: avg(src0_even, src1_even)
+    vaaddu.vv   v31, v2, v4            // next: avg(src1_even, src2_even)
+
+    vslidedown.vi v24, v20, 1
+    vslideup.vi  v24, v30, 15
+    vslidedown.vi v25, v22, 1
+    vslideup.vi  v25, v31, 15
+
+    vaaddu.vv   v16, v20, v21          // dst0
+    vaaddu.vv   v18, v22, v23          // dstv
+    vaaddu.vv   v17, v21, v24          // dsth
+    vaaddu.vv   v19, v23, v25          // dstc
+    vse8.v      v16, (a1)              // store dst0
+    vse8.v      v18, (a3)              // store dstv
+    vse8.v      v17, (a2)              // store dsth
+    vse8.v      v19, (a4)              // store dstc
+    addi        a1, a1, 16
+    addi        a3, a3, 16
+    addi        a2, a2, 16
+    addi        a4, a4, 16
+
+    blez        t2, 3f
+
+    addi        t2, t2, -16
+    vaaddu.vv   v21, v6, v8
+    vaaddu.vv   v23, v8, v10
+
+    vsetvli zero, t6, e8, m2, ta, ma
+    vle8.v      v10, (t3)
+    vle8.v      v26, (t4)
+    vle8.v      v28, (t5)
+    vrgather.vv v0, v10, v12
+    vrgather.vv v6, v10, v14
+    vrgather.vv v2, v26, v12
+    vrgather.vv v8, v26, v14
+    vrgather.vv v4, v28, v12
+    vrgather.vv v10, v28, v14
+    addi        t3, t3, 32
+    addi        t4, t4, 32
+    addi        t5, t5, 32
+    vsetivli    zero, 16, e8, m1, ta, ma
+    vaaddu.vv   v20, v0, v2
+    vaaddu.vv   v22, v2, v4
+
+    vslidedown.vi v24, v30, 1
+    vslideup.vi  v24, v20, 15
+    vslidedown.vi v25, v31, 1
+    vslideup.vi  v25, v22, 15
+
+    vaaddu.vv   v16, v30, v21
+    vaaddu.vv   v18, v31, v23
+    vaaddu.vv   v17, v21, v24
+    vaaddu.vv   v19, v23, v25
+
+    vse8.v      v16, (a1)
+    vse8.v      v18, (a3)
+    vse8.v      v17, (a2)
+    vse8.v      v19, (a4)
+    addi        a1, a1, 16
+    addi        a3, a3, 16
+    addi        a2, a2, 16
+    addi        a4, a4, 16
+
+    bgtz        t2, 2b
+3:  // end of row
+    addi        t0, t0, -1
+    slli        t5, a5, 1
+    add         a0, a0, t5             // src0 += 2*stride
+    add         a1, a1, t1             // advance output pointers
+    add         a2, a2, t1
+    add         a3, a3, t1
+    add         a4, a4, t1
+    bgtz        t0, 1b
+    
+    ret
+endfunc
+
+function plane_copy_interleave_core_rvv, export=1
+
+    addi        t0, a6, 15
+    andi        t0, t0, -16
+    li          t3, 32
+
+    li          t5, 0xaaaaaaaa
+    vmv.v.x     v0, t5
+
+    slli        t1, t0, 1
+    sub         a1, a1, t1
+    sub         a3, a3, t0
+    sub         a5, a5, t0
+1:
+    vsetivli    zero, 16, e8, m1, ta, ma
+    vle8.v      v8, (a2)
+    vle8.v      v2, (a4)
+    addi        a2, a2, 16
+    addi        a4, a4, 16
+
+    vsetvli    zero, t3, e16, m2, ta, ma
+    vzext.vf2   v4, v8
+    vzext.vf2   v6, v2
+    vsetvli    zero, t3, e8, m2, ta, mu
+    vslideup.vi v4, v6, 1, v0.t
+
+    vse8.v      v4, (a0)
+    addi        a0, a0, 32
+    addi        t0, t0, -16
+    bgtz        t0, 1b
+    
+    add         a0, a0, a1
+    add         a2, a2, a3
+    add         a4, a4, a5
+    mv          t0, a6
+    addi        a7, a7, -1
+    bgtz        a7, 1b
+    
+    ret
+endfunc
+
+function hpel_filter_rvv, export=1
+    csrwi   vxrm, 0
+
+    slli    t0, a4, 1
+    sub     t1, a3, t0
+    addi    t3, t1, -2
+
+    li      t2, 20
+    vsetivli zero, 16, e16, m2, ta, ma
+    vmv.v.x v0, t2    # v0 = {20, 20, ...}
+    vmv.v.i v2, 5    # v2 = {5, 5, ...} 
+
+2:  # Label: Outer Loop Start
+    mv      t4, a5              # t4 = current line width counter
+    mv      t5, t3              # t5 = current line src read pointer
+    mv      t0, a0              # t0 = current line dsth moving pointer
+    mv      t1, a1              # t1 = current line dstv moving pointer
+    mv      t2, a2              # t2 = current line dstc moving pointer
+
+1:  # Label: Inner Loop Start
+    mv      t6, t5
+    vsetivli zero, 16, e8, m1, ta, ma
+    
+    vle8.v  v16, (t6)           # Row -2
+    add     t6, t6, a4
+    vle8.v  v17, (t6)           # Row -1
+    add     t6, t6, a4
+    vle8.v  v18, (t6)           # Row 0
+    add     t6, t6, a4
+    vle8.v  v19, (t6)           # Row +1
+    add     t6, t6, a4
+    vle8.v  v20, (t6)           # Row +2
+    add     t6, t6, a4
+    vle8.v  v21, (t6)           # Row +3
+
+    # --- Horizontal sliding window ---
+    vslidedown.vi v22, v18, 1
+    vslidedown.vi v23, v18, 2
+    vslidedown.vi v24, v18, 3
+    vslidedown.vi v25, v18, 4
+    vslidedown.vi v26, v18, 5
+
+    # Vertical pre-add
+    vwaddu.vv   v4, v16, v21    # v4 (A+F)
+    vwaddu.vv   v8, v17, v20    # v8 (B+E)
+    vwaddu.vv   v10, v18, v19   # v10 (C+D)
+
+    # Horizontal pre-add
+    vwaddu.vv   v6, v18, v26    # v6 (A+F)
+    vwaddu.vv   v12, v22, v25    # v12 (B+E)
+    vwaddu.vv   v14, v23, v24   # v14 (C+D)
+
+    vsetivli zero, 16, e16, m2, ta, ma
+    # Vertical fused multiply-add/subtract (Fused Ops)
+    vmacc.vv    v4, v0, v10    # v4 += 20 * (C+D)
+    vnmsac.vv   v4, v2, v8     # v4 -= 5 * (B+E)
+
+    # Horizontal fused multiply-add/subtract (Fused Ops)
+    vmacc.vv    v6, v0, v14    # v6 += 20 * (C+D)
+    vnmsac.vv   v6, v2, v12    # v6 -= 5 * (B+E)
+
+    vslidedown.vi v8, v4, 2
+    vmax.vx v26, v8, zero        # DSTV clamp
+    vmax.vx v28, v6, zero        # DSTH clamp
+
+    # --- Diagonal filtering ---
+    vslidedown.vi v6, v4, 1
+    vslidedown.vi v10, v4, 3
+    vslidedown.vi v12, v4, 4
+    vslidedown.vi v14, v4, 5
+    
+    vadd.vv     v18, v6, v12   # B + E (common term)
+    vadd.vv     v16, v4, v14   # A + F
+    vsub.vv     v16, v16, v18  # (A+F) - (B+E)
+    vsra.vi     v16, v16, 2    # result1
+    vadd.vv     v20, v8, v10   # C + D (result2)
+    vsub.vv     v22, v20, v18  # (C+D) - (B+E)
+    vadd.vv     v22, v22, v16  # result2 + result1
+    vsra.vi     v22, v22, 2    # >> 2
+    vadd.vv     v22, v22, v20  # directly add (C+D) sum, save one vadd
+    vmax.vx     v22, v22, zero # DSTC clamp
+
+    vsetivli zero, 10, e8, m1, ta, ma
+    vnclipu.wi v31, v26, 5
+    vse8.v  v31, (t1)           # Store DSTV
+    addi    t1, t1, 10
+
+    vnclipu.wi v30, v28, 5
+    vse8.v  v30, (t0)           # Store DSTH
+    addi    t0, t0, 10
+
+    vnclipu.wi v22, v22, 6
+    vse8.v  v22, (t2)           # Store DSTC
+    addi    t2, t2, 10
+
+    # --- Inner loop control ---
+    addi    t5, t5, 10           
+    addi    t4, t4, -10          
+    bgt     t4, zero, 1b
+
+    # --- Outer row update ---
+    add     a0, a0, a4
+    add     a1, a1, a4
+    add     a2, a2, a4
+    add     t3, t3, a4
+
+    addi    a6, a6, -1
+    bgt     a6, zero, 2b
+    
     ret
 endfunc
 

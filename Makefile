@@ -237,6 +237,7 @@ endif
 
 # RISCV optimization
 ifeq ($(SYS_ARCH),RISCV)
+SRCASM_X += common/riscv/cabac-a.S
 ifneq ($(findstring HAVE_RVV 1, $(CONFIG)),)
 SRCASM_X += common/riscv/bitstream-a.S \
 			common/riscv/dct-a.S       \
@@ -247,7 +248,8 @@ SRCASM_X += common/riscv/bitstream-a.S \
 			common/riscv/mc-a.S
 
 SRCS_X += common/riscv/predict-c.c \
-		  common/riscv/mc-c.c
+		  common/riscv/mc-c.c \
+		  common/riscv/asm-offsets.c
 
 OBJASM +=
 ifneq ($(findstring HAVE_BITDEPTH8 1, $(CONFIG)),)
