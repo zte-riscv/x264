@@ -36,13 +36,12 @@ endconst
     vsetivli        zero, 1, e32, m1, ta, ma
     lw              a6, (a4)
     vmv.s.x         v24, a6
-    slli            t0, a6, 16
+    li              t0, 0x80808080
     and             t1, a6, t0
-    beqz            a2, 1f
-    beqz            a3, 1f
-    slli            t1, t1, 8
-    and             t1, t1, t1
-    bgez            t1, 2f
+    beq             t1, t0, 1f
+    beqz            a2, 1f               # alpha == 0
+    beqz            a3, 1f               # beta == 0
+    j               2f
 1:
     ret
 2:
