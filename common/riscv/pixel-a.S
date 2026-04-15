@@ -723,359 +723,73 @@ function pixel_sad_x3_4x8_rvv
     ret
 endfunc
 
-function pixel_sad_x3_8x4_rvv
+.macro SAD_X3_FUNC w, h
+function pixel_sad_x3_\w\()x\h\()_rvv, export=1
     li          t0, FENC_STRIDE
+.if \w == 16
+    vsetivli    zero, 16, e8, m1, ta, ma
+.endif
+.if \w == 8
     vsetivli    zero, 8, e8, mf2, ta, ma
+.endif
     vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
     add         a0, a0, t0
     vle8.v      v2, (a1)
     add         a1, a1, a4
-    vle8.v      v3, (a1)
-    add         a1, a1, a4
-    vle8.v      v4, (a2)
-    add         a2, a2, a4
-    vle8.v      v5, (a2)
-    add         a2, a2, a4
-    vle8.v      v6, (a3)
-    add         a3, a3, a4
-    vle8.v      v7, (a3)
-    add         a3, a3, a4
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    vslideup.vi v4, v5, 8
-    vslideup.vi v6, v7, 8
     uabdl       v16, v0, v2, v8, v12
+    vle8.v      v4, (a2)
+    add         a2, a2, a4
     uabdl       v18, v0, v4, v8, v12
+    vle8.v      v6, (a3)
+    add         a3, a3, a4
     uabdl       v20, v0, v6, v8, v12
-
-    vsetivli    zero, 8, e8, mf2, ta, ma
+.rept \h - 1
     vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
     add         a0, a0, t0
     vle8.v      v2, (a1)
     add         a1, a1, a4
-    vle8.v      v3, (a1)
-    add         a1, a1, a4
+    uabal       v16, v0, v2, v8, v12
     vle8.v      v4, (a2)
     add         a2, a2, a4
-    vle8.v      v5, (a2)
-    add         a2, a2, a4
+    uabal       v18, v0, v4, v8, v12
     vle8.v      v6, (a3)
     add         a3, a3, a4
-    vle8.v      v7, (a3)
-    add         a3, a3, a4
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    vslideup.vi v4, v5, 8
-    vslideup.vi v6, v7, 8
-    uabal       v16, v0, v2, v8, v12
-    uabal       v18, v0, v4, v8, v12
     uabal       v20, v0, v6, v8, v12
-
+.endr
+.if \w == 16
     vsetivli    zero, 16, e16, m2, ta, ma
-    vmv.s.x     v30, zero
-    vredsum.vs  v31, v16, v30
+    vmv.v.i     v28, 0
+    vwredsum.vs  v0, v16, v28
+    vwredsum.vs  v2, v18, v28
+    vwredsum.vs  v4, v20, v28
+    vsetivli    zero, 4, e32, m1, ta, ma
+    vmv.x.s     t2, v0
+    vmv.x.s     t3, v2
+    vmv.x.s     t4, v4
+.endif
+.if \w == 8
+    vsetivli    zero, 8, e16, m1, ta, ma
+    vmv.s.x     v28, zero
+    vredsum.vs  v31, v16, v28
     vmv.x.s     t2, v31
-    vredsum.vs  v31, v18, v30
+    vredsum.vs  v31, v18, v28
     vmv.x.s     t3, v31
-    vredsum.vs  v31, v20, v30
+    vredsum.vs  v31, v20, v28
     vmv.x.s     t4, v31
+.endif
 
     sw          t2, 0(a5)
     sw          t3, 4(a5)
     sw          t4, 8(a5)
     ret
 endfunc
+.endm
 
-function pixel_sad_x3_8x8_rvv
-    li          t0, FENC_STRIDE
-
-    vsetivli    zero, 8, e8, mf2, ta, ma
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-
-    vle8.v      v2, (a1)
-    add         a1, a1, a4
-    vle8.v      v3, (a1)
-    add         a1, a1, a4
-
-    vle8.v      v4, (a2)
-    add         a2, a2, a4
-    vle8.v      v5, (a2)
-    add         a2, a2, a4
-
-    vle8.v      v6, (a3)
-    add         a3, a3, a4
-    vle8.v      v7, (a3)
-    add         a3, a3, a4
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    vslideup.vi v4, v5, 8
-    vslideup.vi v6, v7, 8
-    uabdl       v16, v0, v2, v8, v12
-    uabdl       v18, v0, v4, v8, v12
-    uabdl       v20, v0, v6, v8, v12
-.rept 3
-    vsetivli    zero, 8, e8, mf2, ta, ma
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-
-    vle8.v      v2, (a1)
-    add         a1, a1, a4
-    vle8.v      v3, (a1)
-    add         a1, a1, a4
-
-    vle8.v      v4, (a2)
-    add         a2, a2, a4
-    vle8.v      v5, (a2)
-    add         a2, a2, a4
-
-    vle8.v      v6, (a3)
-    add         a3, a3, a4
-    vle8.v      v7, (a3)
-    add         a3, a3, a4
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    vslideup.vi v4, v5, 8
-    vslideup.vi v6, v7, 8
-    uabal       v16, v0, v2, v8, v12
-    uabal       v18, v0, v4, v8, v12
-    uabal       v20, v0, v6, v8, v12
-.endr
-    vsetivli    zero, 16, e16, m2, ta, ma
-    vmv.s.x     v30, zero
-    vredsum.vs  v31, v16, v30
-    vmv.x.s     t2, v31
-    vredsum.vs  v31, v18, v30
-    vmv.x.s     t3, v31
-    vredsum.vs  v31, v20, v30
-    vmv.x.s     t4, v31
-
-    sw          t2, 0(a5)
-    sw          t3, 4(a5)
-    sw          t4, 8(a5)
-    ret
-endfunc
-
-function pixel_sad_x3_8x16_rvv
-    li          t0, FENC_STRIDE
-    vsetivli    zero, 8, e8, mf2, ta, ma
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-    vle8.v      v2, (a1)
-    add         a1, a1, a4
-    vle8.v      v3, (a1)
-    add         a1, a1, a4
-    vle8.v      v4, (a2)
-    add         a2, a2, a4
-    vle8.v      v5, (a2)
-    add         a2, a2, a4
-    vle8.v      v6, (a3)
-    add         a3, a3, a4
-    vle8.v      v7, (a3)
-    add         a3, a3, a4
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    vslideup.vi v4, v5, 8
-    vslideup.vi v6, v7, 8
-    uabdl       v16, v0, v2, v8, v12
-    uabdl       v18, v0, v4, v8, v12
-    uabdl       v20, v0, v6, v8, v12
-.rept 7
-    vsetivli    zero, 8, e8, mf2, ta, ma
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-    vle8.v      v2, (a1)
-    add         a1, a1, a4
-    vle8.v      v3, (a1)
-    add         a1, a1, a4
-    vle8.v      v4, (a2)
-    add         a2, a2, a4
-    vle8.v      v5, (a2)
-    add         a2, a2, a4
-    vle8.v      v6, (a3)
-    add         a3, a3, a4
-    vle8.v      v7, (a3)
-    add         a3, a3, a4
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    vslideup.vi v4, v5, 8
-    vslideup.vi v6, v7, 8
-    uabal       v16, v0, v2, v8, v12
-    uabal       v18, v0, v4, v8, v12
-    uabal       v20, v0, v6, v8, v12
-.endr
-    vsetivli    zero, 16, e16, m2, ta, ma
-    vmv.s.x     v30, zero
-    vredsum.vs  v31, v16, v30
-    vmv.x.s     t2, v31
-    vredsum.vs  v31, v18, v30
-    vmv.x.s     t3, v31
-    vredsum.vs  v31, v20, v30
-    vmv.x.s     t4, v31
-
-    sw          t2, 0(a5)
-    sw          t3, 4(a5)
-    sw          t4, 8(a5)
-    ret
-endfunc
-
-function pixel_sad_x3_16x8_rvv
-    li          t0, FENC_STRIDE
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-
-    vle8.v      v2, (a1)
-    add         a1, a1, a4
-    vle8.v      v3, (a1)
-    add         a1, a1, a4
-    uabdl       v16, v0, v2, v8, v12
-    uabal       v16, v1, v3, v10, v14
-    vle8.v      v4, (a2)
-    add         a2, a2, a4
-    vle8.v      v5, (a2)
-    add         a2, a2, a4
-    uabdl       v18, v0, v4, v8, v12
-    uabal       v18, v1, v5, v10, v14
-    vle8.v      v6, (a3)
-    add         a3, a3, a4
-    vle8.v      v7, (a3)
-    add         a3, a3, a4
-    uabdl       v20, v0, v6, v8, v12
-    uabal       v20, v1, v7, v10, v14
-
- .rept 3
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-
-    vle8.v      v2, (a1)
-    add         a1, a1, a4
-    vle8.v      v3, (a1)
-    add         a1, a1, a4
-    uabal       v16, v0, v2, v8, v12
-    uabal       v16, v1, v3, v10, v14
-    vle8.v      v4, (a2)
-    add         a2, a2, a4
-    vle8.v      v5, (a2)
-    add         a2, a2, a4
-    uabal       v18, v0, v4, v8, v12
-    uabal       v18, v1, v5, v10, v14
-    vle8.v      v6, (a3)
-    add         a3, a3, a4
-    vle8.v      v7, (a3)
-    add         a3, a3, a4
-    uabal       v20, v0, v6, v8, v12
-    uabal       v20, v1, v7, v10, v14
-.endr
-vsetivli    zero, 16, e16, m2, ta, ma
-    vmv.s.x     v30, zero
-    vredsum.vs  v31, v16, v30
-    vmv.x.s     t2, v31
-    vredsum.vs  v31, v18, v30
-    vmv.x.s     t3, v31
-    vredsum.vs  v31, v20, v30
-    vmv.x.s     t4, v31
-
-    sw          t2, 0(a5)
-    sw          t3, 4(a5)
-    sw          t4, 8(a5)
-    ret
-endfunc
-
-function pixel_sad_x3_16x16_rvv
-    li          t0, FENC_STRIDE
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-
-    vle8.v      v2, (a1)
-    add         a1, a1, a4
-    vle8.v      v3, (a1)
-    add         a1, a1, a4
-    uabdl       v16, v0, v2, v8, v12
-    uabal       v16, v1, v3, v10, v14
-    vle8.v      v4, (a2)
-    add         a2, a2, a4
-    vle8.v      v5, (a2)
-    add         a2, a2, a4
-    uabdl       v18, v0, v4, v8, v12
-    uabal       v18, v1, v5, v10, v14
-    vle8.v      v6, (a3)
-    add         a3, a3, a4
-    vle8.v      v7, (a3)
-    add         a3, a3, a4
-    uabdl       v20, v0, v6, v8, v12
-    uabal       v20, v1, v7, v10, v14
-
- .rept 7
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-
-    vle8.v      v2, (a1)
-    add         a1, a1, a4
-    vle8.v      v3, (a1)
-    add         a1, a1, a4
-    uabal       v16, v0, v2, v8, v12
-    uabal       v16, v1, v3, v10, v14
-    vle8.v      v4, (a2)
-    add         a2, a2, a4
-    vle8.v      v5, (a2)
-    add         a2, a2, a4
-    uabal       v18, v0, v4, v8, v12
-    uabal       v18, v1, v5, v10, v14
-    vle8.v      v6, (a3)
-    add         a3, a3, a4
-    vle8.v      v7, (a3)
-    add         a3, a3, a4
-    uabal       v20, v0, v6, v8, v12
-    uabal       v20, v1, v7, v10, v14
-.endr
-    vsetivli    zero, 16, e16, m2, ta, ma
-    vmv.s.x     v30, zero
-    vredsum.vs  v31, v16, v30
-    vmv.x.s     t2, v31
-    vredsum.vs  v31, v18, v30
-    vmv.x.s     t3, v31
-    vredsum.vs  v31, v20, v30
-    vmv.x.s     t4, v31
-
-    sw          t2, 0(a5)
-    sw          t3, 4(a5)
-    sw          t4, 8(a5)
-    ret    
-endfunc
+SAD_X3_FUNC 8, 4
+SAD_X3_FUNC 8, 8
+SAD_X3_FUNC 8, 16
+SAD_X3_FUNC 16, 8
+SAD_X3_FUNC 16, 16
 
 // SAD_X4 functions
 
@@ -1268,443 +982,83 @@ function pixel_sad_x4_4x8_rvv
     ret
 endfunc
 
-function pixel_sad_x4_8x4_rvv
+.macro SAD_X4_FUNC w, h
+function pixel_sad_x4_\w\()x\h\()_rvv, export=1
     li          t0, FENC_STRIDE
+.if \w == 16
+    vsetivli    zero, 16, e8, m1, ta, ma
+.endif
+.if \w == 8
     vsetivli    zero, 8, e8, mf2, ta, ma
+.endif
     vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
     add         a0, a0, t0
     vle8.v      v2, (a1)
     add         a1, a1, a5
-    vle8.v      v3, (a1)
-    add         a1, a1, a5
-    vle8.v      v4, (a2)
-    add         a2, a2, a5
-    vle8.v      v5, (a2)
-    add         a2, a2, a5
-    vle8.v      v6, (a3)
-    add         a3, a3, a5
-    vle8.v      v7, (a3)
-    add         a3, a3, a5
-    vle8.v      v8, (a4)
-    add         a4, a4, a5
-    vle8.v      v9, (a4)
-    add         a4, a4, a5
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    vslideup.vi v4, v5, 8
-    vslideup.vi v6, v7, 8
-    vslideup.vi v8, v9, 8
     uabdl       v16, v0, v2, v10, v12
+    vle8.v      v4, (a2)
+    add         a2, a2, a5
     uabdl       v18, v0, v4, v10, v12
+    vle8.v      v6, (a3)
+    add         a3, a3, a5
     uabdl       v20, v0, v6, v10, v12
+    vle8.v      v8, (a4)
+    add         a4, a4, a5
     uabdl       v22, v0, v8, v10, v12
-
-    vsetivli    zero, 8, e8, mf2, ta, ma
+.rept \h - 1
     vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
     add         a0, a0, t0
     vle8.v      v2, (a1)
     add         a1, a1, a5
-    vle8.v      v3, (a1)
-    add         a1, a1, a5
-    vle8.v      v4, (a2)
-    add         a2, a2, a5
-    vle8.v      v5, (a2)
-    add         a2, a2, a5
-    vle8.v      v6, (a3)
-    add         a3, a3, a5
-    vle8.v      v7, (a3)
-    add         a3, a3, a5
-    vle8.v      v8, (a4)
-    add         a4, a4, a5
-    vle8.v      v9, (a4)
-    add         a4, a4, a5
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    vslideup.vi v4, v5, 8
-    vslideup.vi v6, v7, 8
-    vslideup.vi v8, v9, 8
     uabal       v16, v0, v2, v10, v12
-    uabal       v18, v0, v4, v10, v12
-    uabal       v20, v0, v6, v10, v12
-    uabal       v22, v0, v8, v10, v12
-    vsetivli    zero, 16, e16, m2, ta, ma
-    vmv.s.x     v30, zero
-    vredsum.vs  v31, v16, v30
-    vmv.x.s     t2, v31
-    vredsum.vs  v31, v18, v30
-    vmv.x.s     t3, v31
-    vredsum.vs  v31, v20, v30
-    vmv.x.s     t4, v31
-    vredsum.vs  v31, v22, v30
-    vmv.x.s     t5, v31
-
-    sw          t2, 0(a6)
-    sw          t3, 4(a6)
-    sw          t4, 8(a6)
-    sw          t5, 12(a6)
-    ret
-endfunc
-
-function pixel_sad_x4_8x8_rvv
-    li          t0, FENC_STRIDE
-
-    vsetivli    zero, 8, e8, mf2, ta, ma
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-
-    vle8.v      v2, (a1)
-    add         a1, a1, a5
-    vle8.v      v3, (a1)
-    add         a1, a1, a5
-
     vle8.v      v4, (a2)
     add         a2, a2, a5
-    vle8.v      v5, (a2)
-    add         a2, a2, a5
-
-    vle8.v      v6, (a3)
-    add         a3, a3, a5
-    vle8.v      v7, (a3)
-    add         a3, a3, a5
-
-    vle8.v      v8, (a4)
-    add         a4, a4, a5
-    vle8.v      v9, (a4)
-    add         a4, a4, a5
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    vslideup.vi v4, v5, 8
-    vslideup.vi v6, v7, 8
-    vslideup.vi v8, v9, 8
-    uabdl       v16, v0, v2, v10, v12
-    uabdl       v18, v0, v4, v10, v12
-    uabdl       v20, v0, v6, v10, v12
-    uabdl       v22, v0, v8, v10, v12
-.rept 3
-    vsetivli    zero, 8, e8, mf2, ta, ma
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-
-    vle8.v      v2, (a1)
-    add         a1, a1, a5
-    vle8.v      v3, (a1)
-    add         a1, a1, a5
-
-    vle8.v      v4, (a2)
-    add         a2, a2, a5
-    vle8.v      v5, (a2)
-    add         a2, a2, a5
-
-    vle8.v      v6, (a3)
-    add         a3, a3, a5
-    vle8.v      v7, (a3)
-    add         a3, a3, a5
-
-    vle8.v      v8, (a4)
-    add         a4, a4, a5
-    vle8.v      v9, (a4)
-    add         a4, a4, a5
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    vslideup.vi v4, v5, 8
-    vslideup.vi v6, v7, 8
-    vslideup.vi v8, v9, 8
-    uabal       v16, v0, v2, v10, v12
     uabal       v18, v0, v4, v10, v12
+    vle8.v      v6, (a3)
+    add         a3, a3, a5
     uabal       v20, v0, v6, v10, v12
+    vle8.v      v8, (a4)
+    add         a4, a4, a5
     uabal       v22, v0, v8, v10, v12
 .endr
+.if \w == 16
     vsetivli    zero, 16, e16, m2, ta, ma
-    vmv.s.x     v30, zero
-    vredsum.vs  v31, v16, v30
+    vmv.v.i     v28, 0
+    vwredsum.vs  v0, v16, v28
+    vwredsum.vs  v2, v18, v28
+    vwredsum.vs  v4, v20, v28
+    vwredsum.vs  v6, v22, v28
+    vsetivli    zero, 4, e32, m1, ta, ma
+    vmv.x.s     t2, v0
+    vmv.x.s     t3, v2
+    vmv.x.s     t4, v4
+    vmv.x.s     t5, v6
+.endif
+.if \w == 8
+    vsetivli    zero, 8, e16, m1, ta, ma
+    vmv.s.x     v28, zero
+    vredsum.vs  v31, v16, v28
     vmv.x.s     t2, v31
-    vredsum.vs  v31, v18, v30
+    vredsum.vs  v31, v18, v28
     vmv.x.s     t3, v31
-    vredsum.vs  v31, v20, v30
+    vredsum.vs  v31, v20, v28
     vmv.x.s     t4, v31
-    vredsum.vs  v31, v22, v30
+    vredsum.vs  v31, v22, v28
     vmv.x.s     t5, v31
-
+.endif
     sw          t2, 0(a6)
     sw          t3, 4(a6)
     sw          t4, 8(a6)
     sw          t5, 12(a6)
     ret
 endfunc
+.endm
 
-function pixel_sad_x4_8x16_rvv
-    li          t0, FENC_STRIDE
-    vsetivli    zero, 8, e8, mf2, ta, ma
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-    vle8.v      v2, (a1)
-    add         a1, a1, a5
-    vle8.v      v3, (a1)
-    add         a1, a1, a5
-    vle8.v      v4, (a2)
-    add         a2, a2, a5
-    vle8.v      v5, (a2)
-    add         a2, a2, a5
-    vle8.v      v6, (a3)
-    add         a3, a3, a5
-    vle8.v      v7, (a3)
-    add         a3, a3, a5
-    vle8.v      v8, (a4)
-    add         a4, a4, a5
-    vle8.v      v9, (a4)
-    add         a4, a4, a5
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    vslideup.vi v4, v5, 8
-    vslideup.vi v6, v7, 8
-    vslideup.vi v8, v9, 8
-    uabdl       v16, v0, v2, v10, v12
-    uabdl       v18, v0, v4, v10, v12
-    uabdl       v20, v0, v6, v10, v12
-    uabdl       v22, v0, v8, v10, v12
-.rept 7
-    vsetivli    zero, 8, e8, mf2, ta, ma
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-    vle8.v      v2, (a1)
-    add         a1, a1, a5
-    vle8.v      v3, (a1)
-    add         a1, a1, a5
-    vle8.v      v4, (a2)
-    add         a2, a2, a5
-    vle8.v      v5, (a2)
-    add         a2, a2, a5
-    vle8.v      v6, (a3)
-    add         a3, a3, a5
-    vle8.v      v7, (a3)
-    add         a3, a3, a5
-    vle8.v      v8, (a4)
-    add         a4, a4, a5
-    vle8.v      v9, (a4)
-    add         a4, a4, a5
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    vslideup.vi v4, v5, 8
-    vslideup.vi v6, v7, 8
-    vslideup.vi v8, v9, 8
-    uabal       v16, v0, v2, v10, v12
-    uabal       v18, v0, v4, v10, v12
-    uabal       v20, v0, v6, v10, v12
-    uabal       v22, v0, v8, v10, v12
-.endr
-    vsetivli    zero, 16, e16, m2, ta, ma
-    vmv.s.x     v30, zero
-    vredsum.vs  v31, v16, v30
-    vmv.x.s     t2, v31
-    vredsum.vs  v31, v18, v30
-    vmv.x.s     t3, v31
-    vredsum.vs  v31, v20, v30
-    vmv.x.s     t4, v31
-    vredsum.vs  v31, v22, v30
-    vmv.x.s     t5, v31
-
-    sw          t2, 0(a6)
-    sw          t3, 4(a6)
-    sw          t4, 8(a6)
-    sw          t5, 12(a6)
-    ret
-endfunc
-
-function pixel_sad_x4_16x8_rvv
-    li          t0, FENC_STRIDE
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-    vle8.v      v2, (a1)
-    add         a1, a1, a5
-    vle8.v      v3, (a1)
-    add         a1, a1, a5
-    uabdl       v16, v0, v2, v10, v12
-    uabal       v16, v1, v3, v11, v13
-
-    vle8.v      v4, (a2)
-    add         a2, a2, a5
-    vle8.v      v5, (a2)
-    add         a2, a2, a5
-    uabdl       v18, v0, v4, v10, v12
-    uabal       v18, v1, v5, v11, v13
-
-    vle8.v      v6, (a3)
-    add         a3, a3, a5
-    vle8.v      v7, (a3)
-    add         a3, a3, a5
-    uabdl       v20, v0, v6, v10, v12
-    uabal       v20, v1, v7, v11, v13
-
-    vle8.v      v8, (a4)
-    add         a4, a4, a5
-    vle8.v      v9, (a4)
-    add         a4, a4, a5
-    uabdl       v22, v0, v8, v10, v12
-    uabal       v22, v1, v9, v11, v13
-
- .rept 3
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-    vle8.v      v2, (a1)
-    add         a1, a1, a5
-    vle8.v      v3, (a1)
-    add         a1, a1, a5
-    uabal       v16, v0, v2, v10, v12
-    uabal       v16, v1, v3, v11, v13
-    
-    vle8.v      v4, (a2)
-    add         a2, a2, a5
-    vle8.v      v5, (a2)
-    add         a2, a2, a5
-    uabal       v18, v0, v4, v10, v12
-    uabal       v18, v1, v5, v11, v13
-
-    vle8.v      v6, (a3)
-    add         a3, a3, a5
-    vle8.v      v7, (a3)
-    add         a3, a3, a5
-    uabal       v20, v0, v6, v10, v12
-    uabal       v20, v1, v7, v11, v13
-
-    vle8.v      v8, (a4)
-    add         a4, a4, a5
-    vle8.v      v9, (a4)
-    add         a4, a4, a5
-    uabal       v22, v0, v8, v10, v12
-    uabal       v22, v1, v9, v11, v13
-.endr
-    vsetivli    zero, 16, e16, m2, ta, ma
-    vmv.s.x     v30, zero
-    vredsum.vs  v31, v16, v30
-    vmv.x.s     t2, v31
-    vredsum.vs  v31, v18, v30
-    vmv.x.s     t3, v31
-    vredsum.vs  v31, v20, v30
-    vmv.x.s     t4, v31
-    vredsum.vs  v31, v22, v30
-    vmv.x.s     t5, v31
-
-    sw          t2, 0(a6)
-    sw          t3, 4(a6)
-    sw          t4, 8(a6)
-    sw          t5, 12(a6)
-    ret
-endfunc
-
-function pixel_sad_x4_16x16_rvv
-    li          t0, FENC_STRIDE
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-    vle8.v      v2, (a1)
-    add         a1, a1, a5
-    vle8.v      v3, (a1)
-    add         a1, a1, a5
-    uabdl       v16, v0, v2, v10, v12
-    uabal       v16, v1, v3, v11, v13
-
-    vle8.v      v4, (a2)
-    add         a2, a2, a5
-    vle8.v      v5, (a2)
-    add         a2, a2, a5
-    uabdl       v18, v0, v4, v10, v12
-    uabal       v18, v1, v5, v11, v13
-
-    vle8.v      v6, (a3)
-    add         a3, a3, a5
-    vle8.v      v7, (a3)
-    add         a3, a3, a5
-    uabdl       v20, v0, v6, v10, v12
-    uabal       v20, v1, v7, v11, v13
-
-    vle8.v      v8, (a4)
-    add         a4, a4, a5
-    vle8.v      v9, (a4)
-    add         a4, a4, a5
-    uabdl       v22, v0, v8, v10, v12
-    uabal       v22, v1, v9, v11, v13
-
- .rept 7
-    vle8.v      v0, (a0)
-    add         a0, a0, t0
-    vle8.v      v1, (a0)
-    add         a0, a0, t0
-    vle8.v      v2, (a1)
-    add         a1, a1, a5
-    vle8.v      v3, (a1)
-    add         a1, a1, a5
-    uabal       v16, v0, v2, v10, v12
-    uabal       v16, v1, v3, v11, v13
-    
-    vle8.v      v4, (a2)
-    add         a2, a2, a5
-    vle8.v      v5, (a2)
-    add         a2, a2, a5
-    uabal       v18, v0, v4, v10, v12
-    uabal       v18, v1, v5, v11, v13
-
-    vle8.v      v6, (a3)
-    add         a3, a3, a5
-    vle8.v      v7, (a3)
-    add         a3, a3, a5
-    uabal       v20, v0, v6, v10, v12
-    uabal       v20, v1, v7, v11, v13
-
-    vle8.v      v8, (a4)
-    add         a4, a4, a5
-    vle8.v      v9, (a4)
-    add         a4, a4, a5
-    uabal       v22, v0, v8, v10, v12
-    uabal       v22, v1, v9, v11, v13
-.endr
-    vsetivli    zero, 16, e16, m2, ta, ma
-    vmv.s.x     v30, zero
-    vredsum.vs  v31, v16, v30
-    vmv.x.s     t2, v31
-    vredsum.vs  v31, v18, v30
-    vmv.x.s     t3, v31
-    vredsum.vs  v31, v20, v30
-    vmv.x.s     t4, v31
-    vredsum.vs  v31, v22, v30
-    vmv.x.s     t5, v31
-
-    sw          t2, 0(a6)
-    sw          t3, 4(a6)
-    sw          t4, 8(a6)
-    sw          t5, 12(a6)
-    ret
-endfunc
+SAD_X4_FUNC 8, 4
+SAD_X4_FUNC 8, 8
+SAD_X4_FUNC 8, 16
+SAD_X4_FUNC 16, 8
+SAD_X4_FUNC 16, 16
 
 // SSD functions
 
