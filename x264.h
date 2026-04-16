@@ -189,6 +189,7 @@ typedef struct x264_nal_t
 
 /* RISCV */
 #define X264_CPU_RVV             0x0000001U  /* RISCV RVV */
+#define X264_CPU_RVV128          0x0000002U  /* RISCV RVV (VLEN=128) */
 
 /* Analyse flags */
 #define X264_ANALYSE_I4x4       0x0001U  /* Analyse i4x4 */

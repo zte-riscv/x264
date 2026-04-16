@@ -226,6 +226,7 @@ static void print_bench(void)
                     b->cpu&X264_CPU_LASX ? "lasx" :
                     b->cpu&X264_CPU_LSX ? "lsx" :
 #elif ARCH_RISCV
+                    b->cpu&X264_CPU_RVV128 ? "rvv128" :
                     b->cpu&X264_CPU_RVV ? "rvv" :
 #endif
                     "c",
@@ -3024,6 +3025,8 @@ static int check_all_flags( void )
 #elif ARCH_RISCV
     if( cpu_detect & X264_CPU_RVV )
         ret |= add_flags( &cpu0, &cpu1, X264_CPU_RVV, "RVV" );
+    if( cpu_detect & X264_CPU_RVV128 )
+        ret |= add_flags( &cpu0, &cpu1, X264_CPU_RVV128, "RVV128" );
 #endif
     return ret;
 }

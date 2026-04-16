@@ -529,6 +529,8 @@ struct x264_riscv_hwprobe {
     uint64_t value;
 };
 
+int x264_get_vlenb( void );
+
 // Specifically requires RVV 1.0+ ISA
 uint32_t x264_cpu_detect( void )
 {
@@ -545,6 +547,8 @@ uint32_t x264_cpu_detect( void )
             if ( pairs[0].value & RISCV_HWPROBE_IMA_V )
             {
                 flags |= X264_CPU_RVV;
+                if ( x264_get_vlenb() == 16 )
+                    flags |= X264_CPU_RVV128;
             }
             return flags;
         }
@@ -563,6 +567,8 @@ uint32_t x264_cpu_detect( void )
                     if (strstr(buf, "v_") || strstr(buf, "v\n"))
                     {
                         flags |= X264_CPU_RVV;
+                        if ( x264_get_vlenb() == 16 )
+                            flags |= X264_CPU_RVV128;   
                         break; 
                     }
                 }
