@@ -150,20 +150,22 @@ function sub4x4_dct_rvv
     vsetvli         zero, zero, e16, mf2, ta, ma
     DCT_1D          v0, v1, v2, v3, v8, v9, v10, v11
 
-    // TRANSPOSE4x4_16 v0, v1, v2, v3
-    // zip way
-     li t5, 32
+    // Using slide and shift to implement TRANSPOSE4x4_16bit
+    // Merge 4 rows into v0 (LMUL=2 group)
      vsetivli zero, 4, e32, m1, ta, ma
      vslideup.vi v0, v1, 2
      vslideup.vi v2, v3, 2
 
      vsetivli zero, 8, e32, m2, ta, ma
      vslideup.vi v0, v2, 4
+
+    // 32-bit granularity split
      vsetivli zero, 4, e32, m1, ta, ma
-     // vmv1r.v v1, v2
-     
+     li t5, 32
      vnsrl.wi v4, v0, 0
      vnsrl.wx v6, v0, t5
+
+    // 16-bit granularity split
      vsetivli zero, 4, e16, mf2, ta, ma
      vnsrl.wi v0, v4, 0
      vnsrl.wi v1, v4, 16
@@ -361,7 +363,7 @@ function sub8x8_dct8_rvv
 
     vsetivli     zero, 8, e16, m1, ta, ma
     DCT8_1D     row
-    TRANSPOSE8x8_16 v0, v1, v2, v3, v4, v5, v6, v7
+    TRANSPOSE8x8_16 v0, v1, v2, v3, v4, v5, v6, v7, a6, sp
     DCT8_1D     col
 
     vsetivli    zero, 8, e16, m1, ta, ma
@@ -429,17 +431,15 @@ function add4x4_idct_rvv
     SUMSUB_AB   v0, v3, v4, v6
     SUMSUB_AB   v1, v2, v5, v7
 
-    // TRANSPOSE4x4_16  v0, v1, v2, v3
-    // zip way
-     li t5, 32
      vsetivli zero, 4, e32, m1, ta, ma
      vslideup.vi v0, v1, 2
      vslideup.vi v2, v3, 2
 
      vsetivli zero, 8, e32, m2, ta, ma
      vslideup.vi v0, v2, 4
+
      vsetivli zero, 4, e32, m1, ta, ma
-     // vmv1r.v v1, v2
+     li t5, 32
      vnsrl.wi v4, v0, 0
      vnsrl.wx v6, v0, t5
      vsetivli zero, 4, e16, mf2, ta, ma
@@ -480,7 +480,6 @@ function add4x4_idct_rvv
     vmax.vx   v3, v3, zero
 
 
-    csrwi  vxrm, 0
     vsetivli zero, 4, e8, mf4, ta, ma
     vnclipu.wi v4, v0, 0
     vnclipu.wi v5, v1, 0
@@ -539,7 +538,7 @@ function add8x4_idct_rvv
     vssra.vi    v2, v2, 6
     vssra.vi    v3, v3, 6
 
-    vsetivli    zero, 8, e8, mf2, tu, ma
+    vsetivli    zero, 8, e8, mf2, ta, ma
 
     vle8.v      v28, (a0)
     add         t3, a0, t5
@@ -560,7 +559,6 @@ function add8x4_idct_rvv
     vmax.vx     v2, v2, zero
     vmax.vx     v3, v3, zero
 
-    csrwi  vxrm, 0
     vsetvli     zero, zero, e8, mf2, ta, ma
     vnclipu.wi  v4, v0, 0
     vnclipu.wi  v5, v1, 0
@@ -651,7 +649,7 @@ function add8x8_idct8_rvv
 
     IDCT8_1D    row
 
-    TRANSPOSE8x8_16 v16, v17, v18, v19, v20, v21, v22, v23
+    TRANSPOSE8x8_16 v16, v17, v18, v19, v20, v21, v22, v23, a6, sp
 
     IDCT8_1D    col
 
@@ -700,7 +698,6 @@ function add8x8_idct8_rvv
     vmax.vx     v22, v22, zero
     vmax.vx     v23, v23, zero
 
-    csrwi  vxrm, 0
     vsetvli zero, zero, e8, mf2, ta, ma
     vnclipu.wi  v0, v16, 0
     vnclipu.wi  v1, v17, 0
@@ -792,7 +789,6 @@ function add8x8_idct_dc_rvv
     vmax.vx     v22, v22, zero
     vmax.vx     v23, v23, zero
 
-    csrwi  vxrm, 0
     vsetvli     zero, zero, e8, mf2, ta, ma
     vnclipu.wi  v20, v20, 0
     vnclipu.wi  v21, v21, 0
@@ -874,7 +870,6 @@ endfunc
     vmax.vx     v26, v26, zero
     vmax.vx     v27, v27, zero
 
-    csrwi  vxrm, 0
     vsetvli     zero, zero, e8, mf2, ta, ma
     vnclipu.wi  v20, v24, 0
     vnclipu.wi  v21, v26, 0
@@ -959,7 +954,7 @@ endfunc
 .endm
 
 .macro transpose2x2, s1, s2, t0
-    vsetivli    zero, 2, e64, m1, tu, ma
+    vsetivli    zero, 2, e64, m1, ta, ma
     vmv1r.v \t0, \s1
     vslideup.vi \s1, \s2, 1
     vsetivli    zero, 1, e64, m1, tu, ma
@@ -974,10 +969,10 @@ function sub8x8_dct_dc_rvv
     sub4x4x2_dct_dc v1, v24, v25, v26, v27, v28, v29, v30, v31, v6
 
     transpose2x2 v0, v1, v20
-    vsetivli    zero, 8, e16, m1, tu, ma
+    vsetivli    zero, 8, e16, m1, ta, ma
     SUMSUB_AB   v2, v3, v0, v1
     transpose2x2 v2, v3, v21
-    vsetivli    zero, 8, e16, m1, tu, ma
+    vsetivli    zero, 8, e16, m1, ta, ma
     SUMSUB_AB   v4, v5, v2, v3
 
     vsetivli    zero, 2, e64, m1, tu, ma
@@ -1012,7 +1007,7 @@ endfunc
 
 .macro transpose2x4_32 buf, bstride, t0, t1, s0, s1
     vssseg2e32.v \s0, (\buf), \bstride
-    vsetivli    zero, 2, e32, m1, tu, ma
+    vsetivli    zero, 2, e32, m1, ta, ma
     vle32.v     \t0, (\buf)
     addi        \buf, \buf, 8
     vle32.v     \t1, (\buf)
@@ -1020,7 +1015,7 @@ endfunc
     vle32.v     \s0, (\buf)
     addi        \buf, \buf, 8
     vle32.v     \s1, (\buf)
-    vsetivli    zero, 4, e32, m1, tu, ma
+    vsetivli    zero, 4, e32, m1, ta, ma
     vslideup.vi \t0, \s0, 2
     vslideup.vi \t1, \s1, 2
 .endm
@@ -1039,18 +1034,18 @@ function sub8x16_dct_dc_rvv
     mv          t0, a1
     li          t1, 8
 
-    vsetivli    zero, 4, e32, m1, tu, ma
+    vsetivli    zero, 4, e32, m1, ta, ma
     transpose2x4_32 t0, t1, v2, v3, v4, v5
-    vsetivli    zero, 8, e16, m1, tu, ma
+    vsetivli    zero, 8, e16, m1, ta, ma
     SUMSUB_AB   v0, v1, v2, v3
 
-    vsetivli    zero, 4, e32, m1, tu, ma
+    vsetivli    zero, 4, e32, m1, ta, ma
     mv          t0, a1
     transpose2x4_32 t0, t1, v2, v3, v0, v1
-    vsetivli    zero, 8, e16, m1, tu, ma
+    vsetivli    zero, 8, e16, m1, ta, ma
     SUMSUB_AB   v0, v1, v2, v3
     transpose2x2 v0, v1, v30
-    vsetivli    zero, 8, e16, m1, tu, ma
+    vsetivli    zero, 8, e16, m1, ta, ma
     SUMSUB_AB   v8, v9, v0, v1
 
     vsetivli    zero, 2, e64, m1, ta, ma
@@ -1076,5 +1071,36 @@ function zigzag_scan_4x4_frame_rvv
     vle8.v      v2, (a2)
     vrgather.vv v4, v0, v2
     vse8.v      v4, (a0)
+    ret
+endfunc
+
+const scan8x8_frame_rvv_table, align=6
+    .byte   0,  1, 16, 17,  2,  3,  4,  5
+    .byte  18, 19, 32, 33, 48, 49, 34, 35
+    .byte  20, 21,  6,  7,  8,  9, 22, 23
+    .byte  36, 37, 50, 51, 64, 65, 80, 81
+    .byte  66, 67, 52, 53, 38, 39, 24, 25
+    .byte  10, 11, 12, 13, 26, 27, 40, 41
+    .byte  54, 55, 68, 69, 82, 83, 96, 97
+    .byte 112,113, 98, 99, 84, 85, 70, 71
+    .byte  56, 57, 42, 43, 28, 29, 14, 15
+    .byte  30, 31, 44, 45, 58, 59, 72, 73
+    .byte  86, 87,100,101,114,115,116,117
+    .byte 102,103, 88, 89, 74, 75, 60, 61
+    .byte  46, 47, 62, 63, 76, 77, 90, 91
+    .byte 104,105,118,119,120,121,106,107
+    .byte  92, 93, 78, 79, 94, 95,108,109
+    .byte 122,123,124,125,110,111,126,127
+endconst
+
+// void x264_zigzag_scan_8x8_frame_rvv( int16_t level[64], int16_t dct[64] )
+function zigzag_scan_8x8_frame_rvv, export=1
+    movrel          a2, scan8x8_frame_rvv_table
+    li              t0, 128
+    vsetvli         zero, t0, e8, m8, ta, ma
+    vle8.v          v8, (a1)
+    vle8.v          v16, (a2)
+    vrgather.vv     v24, v8, v16
+    vse8.v          v24, (a0)
     ret
 endfunc

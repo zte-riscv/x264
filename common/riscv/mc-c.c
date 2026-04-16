@@ -123,6 +123,10 @@ void x264_plane_copy_core_rvv( pixel *dst, intptr_t i_dst,
 void x264_plane_copy_interleave_core_rvv( pixel *dst,  intptr_t i_dst,
                                           pixel *srcu, intptr_t i_srcu,
                                           pixel *srcv, intptr_t i_srcv, int w, int h );
+#define x264_plane_copy_interleave_core_rvv128 x264_template(plane_copy_interleave_core_rvv128)
+void x264_plane_copy_interleave_core_rvv128( pixel *dst,  intptr_t i_dst,
+                                          pixel *srcu, intptr_t i_srcu,
+                                          pixel *srcv, intptr_t i_srcv, int w, int h );
 #define x264_store_interleave_chroma_rvv x264_template(store_interleave_chroma_rvv)
 void x264_store_interleave_chroma_rvv( pixel *dst, intptr_t i_dst, pixel *srcu, pixel *srcv, int height );
 
@@ -244,6 +248,7 @@ static pixel *get_ref_rvv( pixel *dst,   intptr_t *i_dst_stride,
 }
 PLANE_COPY(16, rvv)
 PLANE_INTERLEAVE(rvv)
+PLANE_INTERLEAVE(rvv128)
 void x264_mc_init_rvv( uint32_t cpu, x264_mc_functions_t *pf )
 {
 #if !HIGH_BIT_DEPTH
@@ -285,6 +290,10 @@ void x264_mc_init_rvv( uint32_t cpu, x264_mc_functions_t *pf )
         pf->plane_copy_deinterleave = x264_plane_copy_deinterleave_rvv;
         pf->plane_copy_deinterleave_rgb = x264_plane_copy_deinterleave_rgb_rvv;
         pf->hpel_filter = x264_hpel_filter_rvv;
+    }
+    if( cpu&X264_CPU_RVV128 )
+    {
+        pf->plane_copy_interleave = plane_copy_interleave_rvv128;
     }
 #endif // !HIGH_BIT_DEPTH
 }

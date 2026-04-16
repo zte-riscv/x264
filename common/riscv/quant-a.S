@@ -111,7 +111,7 @@ function decimate_score64_rvv
     vmsleu.vi       v21, v8, 1
     vmnot.m         v20, v20
     vmnot.m         v21, v21
-    vsetivli        zero, 1, e64, m2, ta, ma
+    vsetivli        zero, 1, e64, m1, ta, ma
     vmv.x.s         a1, v20
     vmv.x.s         a2, v21
     bnez            a2, 9f

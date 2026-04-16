@@ -1687,6 +1687,30 @@ void x264_pixel_init( uint32_t cpu, x264_pixel_function_t *pixf )
         pixf->intra_satd_x3_16x16 = intra_satd_x3_16x16_rvv;
 
     }
+    if( cpu&X264_CPU_RVV128 )
+    {
+        pixf->sad[PIXEL_16x8]  = x264_pixel_sad_16x8_rvv128;
+        pixf->sad[PIXEL_16x16]  = x264_pixel_sad_16x16_rvv128;
+        pixf->sad_x3[PIXEL_16x8]  = x264_pixel_sad_x3_16x8_rvv128;
+        pixf->sad_x3[PIXEL_16x16]  = x264_pixel_sad_x3_16x16_rvv128;
+        pixf->sad_x4[PIXEL_16x8]  = x264_pixel_sad_x4_16x8_rvv128;
+        pixf->sad_x4[PIXEL_16x16]  = x264_pixel_sad_x4_16x16_rvv128;
+        pixf->satd[PIXEL_4x16]  = x264_pixel_satd_4x16_rvv128;
+        pixf->satd[PIXEL_16x8]  = x264_pixel_satd_16x8_rvv128;
+        pixf->satd[PIXEL_16x16]  = x264_pixel_satd_16x16_rvv128;
+
+        INIT8( ssd, _rvv128 );
+        INIT4( hadamard_ac, _rvv128 );
+        pixf->vsad = x264_pixel_vsad_rvv128;
+        pixf->var[PIXEL_8x8]   = x264_pixel_var_8x8_rvv128;
+        pixf->var[PIXEL_8x16]   = x264_pixel_var_8x16_rvv128;
+        pixf->var[PIXEL_16x16]   = x264_pixel_var_16x16_rvv128;
+        pixf->var2[PIXEL_8x8]   = x264_pixel_var2_8x8_rvv128;
+        pixf->var2[PIXEL_8x16]   = x264_pixel_var2_8x16_rvv128;
+        pixf->sa8d[PIXEL_8x8]   = x264_pixel_sa8d_8x8_rvv128;
+        pixf->sa8d[PIXEL_16x16]   = x264_pixel_sa8d_16x16_rvv128;
+
+    }
 #endif
 
 #endif // HIGH_BIT_DEPTH

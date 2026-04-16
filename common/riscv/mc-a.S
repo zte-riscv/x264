@@ -309,9 +309,9 @@ endfunc
 
 function pixel_avg2_w4_rvv, export=1
     csrwi  vxrm, 0
+    vsetivli    zero, 4, e8, mf4, ta, ma
 1:
     addi  a5, a5, -2
-    vsetivli    zero, 4, e8, mf4, ta, ma
     vle8.v    v1, (a2)
     add       a2, a2, a3
     vle8.v    v2, (a4) 
@@ -333,9 +333,9 @@ endfunc
 
 function pixel_avg2_w8_rvv, export=1
     csrwi  vxrm, 0
+    vsetivli    zero, 8, e8, mf2, ta, ma
 1:
     addi  a5, a5, -2
-    vsetivli    zero, 8, e8, mf2, ta, ma
     vle8.v    v1, (a2)
     add       a2, a2, a3
     vle8.v    v2, (a4) 
@@ -357,9 +357,9 @@ endfunc
 
 function pixel_avg2_w16_rvv, export=1
     csrwi  vxrm, 0
+    vsetivli    zero, 16, e8, m1, ta, ma
 1:
     addi  a5, a5, -2
-    vsetivli    zero, 16, e8, m1, ta, ma
     vle8.v    v1, (a2)
     add       a2, a2, a3
     vle8.v    v2, (a4) 
@@ -381,9 +381,9 @@ endfunc
 
 function pixel_avg2_w20_rvv, export=1
     csrwi  vxrm, 0
+    vsetivli    zero, 20, e8, m2, ta, ma
 1:
     addi  a5, a5, -2
-    vsetivli    zero, 20, e8, m2, ta, ma
     vle8.v    v0, (a2)
     add       a2, a2, a3
     vle8.v    v2, (a4) 
@@ -404,7 +404,6 @@ function pixel_avg2_w20_rvv, export=1
 endfunc
 
 function mc_weight_w4_rvv, export=1
-    csrwi  vxrm, 0
     ld t0, 36(a4) // scale
     ld t1, 40(a4) // offset
     ld t2, 32(a4) // denom
@@ -446,7 +445,6 @@ function mc_weight_w4_rvv, export=1
 endfunc
 
 function mc_weight_w8_rvv, export=1
-    csrwi  vxrm, 0
     ld t0, 36(a4) // scale
     ld t1, 40(a4) // offset
     ld t2, 32(a4) // denom
@@ -489,7 +487,6 @@ function mc_weight_w8_rvv, export=1
 endfunc
 
 function mc_weight_w16_rvv, export=1
-    csrwi  vxrm, 0
     ld t0, 36(a4) // scale
     ld t1, 40(a4) // offset
     ld t2, 32(a4) // denom
@@ -532,7 +529,6 @@ function mc_weight_w16_rvv, export=1
 endfunc
 
 function mc_weight_w20_rvv, export=1
-    csrwi  vxrm, 0
     ld t0, 36(a4) // scale
     ld t1, 40(a4) // offset
     ld t2, 32(a4) // denom
@@ -570,7 +566,6 @@ function mc_weight_w20_rvv, export=1
 endfunc
 
 function mc_weight_w4_nodenom_rvv, export=1
-    csrwi  vxrm, 0
     ld t0, 36(a4) // scale
     ld t1, 40(a4) // offset
     vsetivli    zero, 4, e8, mf4, ta, ma
@@ -608,7 +603,6 @@ function mc_weight_w4_nodenom_rvv, export=1
 endfunc
 
 function mc_weight_w8_nodenom_rvv, export=1
-    csrwi  vxrm, 0
     ld t0, 36(a4) // scale
     ld t1, 40(a4) // offset
     vsetivli    zero, 8, e8, mf2, ta, ma
@@ -646,7 +640,6 @@ function mc_weight_w8_nodenom_rvv, export=1
 endfunc
 
 function mc_weight_w16_nodenom_rvv, export=1
-    csrwi  vxrm, 0
     ld t0, 36(a4) // scale
     ld t1, 40(a4) // offset
     vsetivli    zero, 16, e8, m1, ta, ma
@@ -684,7 +677,6 @@ function mc_weight_w16_nodenom_rvv, export=1
 endfunc
 
 function mc_weight_w20_nodenom_rvv, export=1
-    csrwi  vxrm, 0
     ld t0, 36(a4) // scale
     ld t1, 40(a4) // offset
 1:
@@ -994,8 +986,8 @@ function mc_chroma_w4_rvv, export=0
     
     vrgather.vv v0, v12, v26    // U0
     vrgather.vv v1, v12, v27    // V0
-    vslide1down.vx v2, v0, zero // U0_next
-    vslide1down.vx v3, v1, zero // V0_next
+    vslidedown.vi v2, v0, 1 // U0_next
+    vslidedown.vi v3, v1, 1 // V0_next
 
 1:  // Height loop
     addi    t6, t6, -2
@@ -1004,11 +996,11 @@ function mc_chroma_w4_rvv, export=0
     vsetivli zero, 10, e8, m1, ta, ma
     vle8.v   v12, (a3)
     add      a3, a3, a4
-    
+
     vrgather.vv v4, v12, v26    // U1
     vrgather.vv v5, v12, v27    // V1
-    vslide1down.vx v6, v4, zero // U1_next
-    vslide1down.vx v7, v5, zero // V1_next
+    vslidedown.vi v6, v4, 1 // U1_next
+    vslidedown.vi v7, v5, 1 // V1_next
 
     // Calc Row 0
     vsetivli zero, 4, e8, mf2, ta, ma
@@ -1039,8 +1031,8 @@ function mc_chroma_w4_rvv, export=0
 
     vrgather.vv v0, v12, v26
     vrgather.vv v1, v12, v27
-    vslide1down.vx v2, v0, zero
-    vslide1down.vx v3, v1, zero
+    vslidedown.vi v2, v0, 1
+    vslidedown.vi v3, v1, 1
 
     // Calc Row 1
     vsetivli zero, 4, e8, mf2, ta, ma
@@ -1148,16 +1140,16 @@ function mc_chroma_w4_rvv, export=0
     add      a3, a3, a4
     vrgather.vv v0, v12, v26
     vrgather.vv v1, v12, v27
-    vslide1down.vx v2, v0, zero 
-    vslide1down.vx v3, v1, zero 
+    vslidedown.vi v2, v0, 1 
+    vslidedown.vi v3, v1, 1 
     
     // Load Row 1
     vle8.v   v12, (a3)
     add      a3, a3, a4
     vrgather.vv v4, v12, v26
     vrgather.vv v5, v12, v27
-    vslide1down.vx v6, v4, zero 
-    vslide1down.vx v7, v5, zero 
+    vslidedown.vi v6, v4, 1 
+    vslidedown.vi v7, v5, 1 
 
     // Calc Row 0
     vsetivli zero, 4, e8, mf2, ta, ma
@@ -1203,7 +1195,7 @@ function mc_chroma_w8_rvv, export=0
     // =========================================================
     // Case 1: 2D Interpolation (dx != 0 && dy != 0)
     // =========================================================
-    vsetivli zero, 8, e8, m1, ta, ma
+    vsetivli zero, 8, e8, mf2, ta, ma
     vmv.v.x  v28, t0            // cA
     vmv.v.x  v29, t1            // cB
     vmv.v.x  v30, t2            // cC
@@ -1213,8 +1205,8 @@ function mc_chroma_w8_rvv, export=0
     vsetivli zero, 9, e8, m1, ta, ma
     vlseg2e8.v  v0, (a3)        // v0=U0, v1=V0
     add         a3, a3, a4
-    vslide1down.vx v2, v0, zero // U0_next
-    vslide1down.vx v3, v1, zero // V0_next
+    vslidedown.vi v2, v0, 1 // U0_next
+    vslidedown.vi v3, v1, 1 // V0_next
 
 1:  // Height Loop
     addi    t6, t6, -2
@@ -1223,11 +1215,11 @@ function mc_chroma_w8_rvv, export=0
     vsetivli zero, 9, e8, m1, ta, ma
     vlseg2e8.v  v4, (a3)        // v4=U1, v5=V1
     add         a3, a3, a4
-    vslide1down.vx v6, v4, zero // U1_next
-    vslide1down.vx v7, v5, zero // V1_next
+    vslidedown.vi v6, v4, 1 // U1_next
+    vslidedown.vi v7, v5, 1 // V1_next
 
     // Calc Row 0
-    vsetivli zero, 8, e8, m1, ta, ma
+    vsetivli zero, 8, e8, mf2, ta, ma
     // U
     vwmulu.vv   v16, v0, v28
     vwmaccu.vv  v16, v29, v2
@@ -1251,21 +1243,21 @@ function mc_chroma_w8_rvv, export=0
     vsetivli zero, 9, e8, m1, ta, ma
     vlseg2e8.v  v0, (a3)        
     add         a3, a3, a4
-    vslide1down.vx v2, v0, zero
-    vslide1down.vx v3, v1, zero
+    vslidedown.vi v2, v0, 1
+    vslidedown.vi v3, v1, 1
 
     // Calc Row 1
-    vsetivli zero, 8, e8, m1, ta, ma
+    vsetivli zero, 8, e8, mf2, ta, ma
     // U
     vwmulu.vv   v16, v4, v28
-    vwmaccu.vv  v16, v29, v6        
+    vwmaccu.vv  v16, v29, v6       
     vwmaccu.vv  v16, v30, v0    // Row 2 is new bottom
-    vwmaccu.vv  v16, v31, v2       
+    vwmaccu.vv  v16, v31, v2      
     // V
     vwmulu.vv   v18, v5, v28
-    vwmaccu.vv  v18, v29, v7        
-    vwmaccu.vv  v18, v30, v1        
-    vwmaccu.vv  v18, v31, v3       
+    vwmaccu.vv  v18, v29, v7       
+    vwmaccu.vv  v18, v30, v1       
+    vwmaccu.vv  v18, v31, v3      
 
     // Store Row 1
     vnclipu.wi  v24, v16, 6
@@ -1282,7 +1274,7 @@ function mc_chroma_w8_rvv, export=0
     // Case 2: Vertical Only (dx == 0)
     // =========================================================
 2:   
-    vsetivli zero, 8, e8, m1, ta, ma
+    vsetivli zero, 8, e8, mf2, ta, ma
     vid.v    v26            // 0..7
     vsll.vi  v26, v26, 1    // U index
     vadd.vi  v27, v26, 1    // V index
@@ -1301,14 +1293,14 @@ function mc_chroma_w8_rvv, export=0
     addi    t6, t6, -2
 
     // Load Row 1
-    vsetivli zero, 16, e8, m2, ta, ma
+    vsetivli zero, 16, e8, m1, ta, ma
     vle8.v   v12, (a3)
     add      a3, a3, a4
 
     vsetivli zero, 8, e8, m1, ta, ma
     vrgather.vv v4, v12, v26
     vrgather.vv v5, v12, v27
-    
+
     // Calc Row 0
     vwmulu.vv   v16, v0, v28
     vwmaccu.vv  v16, v30, v4
@@ -1323,7 +1315,7 @@ function mc_chroma_w8_rvv, export=0
     add         a1, a1, a2
 
     // Load Row 2
-    vsetivli zero, 16, e8, m2, ta, ma
+    vsetivli zero, 16, e8, m1, ta, ma
     vle8.v   v12, (a3)
     add      a3, a3, a4
 
@@ -1363,14 +1355,14 @@ function mc_chroma_w8_rvv, export=0
     // Load Row 0
     vlseg2e8.v  v0, (a3)
     add         a3, a3, a4
-    vslide1down.vx v2, v0, zero 
-    vslide1down.vx v3, v1, zero 
+    vslidedown.vi v2, v0, 1 
+    vslidedown.vi v3, v1, 1 
     
     // Load Row 1
     vlseg2e8.v  v4, (a3)
     add         a3, a3, a4
-    vslide1down.vx v6, v4, zero 
-    vslide1down.vx v7, v5, zero 
+    vslidedown.vi v6, v4, 1 
+    vslidedown.vi v7, v5, 1 
 
     // Calc Row 0
     vsetivli zero, 8, e8, m1, ta, ma
@@ -1665,8 +1657,8 @@ endfunc
 
 function plane_copy_core_rvv, export=1
 0:
-    mv t5, a2
-    mv t6, a4
+    mv      t5, a2
+    mv      t6, a4
 
     add     t0, t5, t6                # srcend
     add     t1, a0, t6                # dstend
@@ -1676,11 +1668,11 @@ function plane_copy_core_rvv, export=1
 
     andi    t2, t5, 15
 
-    li  t3, 16
-    sub t3, t3, t2
-    add t5, t5, t3
-    add a6, a0, t3
-    sub t6, t6, t3
+    li      t3, 16
+    sub     t3, t3, t2
+    add     t5, t5, t3
+    add     a6, a0, t3
+    sub     t6, t6, t3
 
     vse8.v  v3, (a0)                  # str D_q, [dstin]
 
@@ -1694,7 +1686,6 @@ function plane_copy_core_rvv, export=1
     sub     t6, t6, t4
     blez    t6, 3f
 2:
-
     vse8.v  v0, (a6)                # A_q B_q
    
     addi    t4, t5, 64
@@ -1801,9 +1792,9 @@ load_deinterleave_chroma_rvv:
     add         a0, a0, t0
     vse8.v      v3, (a0)
     add         a0, a0, t0
-    vse8.v  v5, (a0)
+    vse8.v      v5, (a0)
     add         a0, a0, t0
-    vse8.v  v6, (a0)
+    vse8.v      v6, (a0)
     add         a0, a0, t0
 
     vsetivli    zero, 16, e8, m1, ta, ma
@@ -1812,6 +1803,7 @@ load_deinterleave_chroma_rvv:
     ret
 endfunc
 
+//a0=src0, a1=dst0, a2=dsth, a3=dstv, a4=dstc, a5=src_stride, a6=dst_stride, a7=width, [sp]=height
 function frame_init_lowres_core_rvv, export=1
     ld          t0, 0(sp)              // height
     csrwi       vxrm, 0
@@ -1937,7 +1929,7 @@ function frame_init_lowres_core_rvv, export=1
     add         a3, a3, t1
     add         a4, a4, t1
     bgtz        t0, 1b
-    
+
     ret
 endfunc
 
@@ -1979,6 +1971,49 @@ function plane_copy_interleave_core_rvv, export=1
     addi        a7, a7, -1
     bgtz        a7, 1b
     
+    ret
+endfunc
+
+function plane_copy_interleave_core_rvv128, export=1
+
+    addi        t0, a6, 15
+    andi        t0, t0, -16
+    li          t3, 32
+
+    slli        t1, t0, 1
+    sub         a1, a1, t1
+    sub         a3, a3, t0
+    sub         a5, a5, t0
+
+    vsetvli     zero, t3, e8, m2, ta, ma
+    vid.v       v16
+    vsrl.vi     v18, v16, 1
+    vand.vi     v20, v16, 1
+    vsll.vi     v20, v20, 4
+    vadd.vv     v22, v18, v20
+
+1:
+    vsetivli    zero, 16, e8, m1, ta, ma
+    vle8.v      v0, (a2)
+    vle8.v      v1, (a4)
+    addi        a2, a2, 16
+    addi        a4, a4, 16
+
+    vsetvli     zero, t3, e8, m2, ta, ma
+    vrgather.vv v4, v0, v22
+
+    vse8.v      v4, (a0)
+    addi        a0, a0, 32
+    addi        t0, t0, -16
+    bgtz        t0, 1b
+
+    add         a0, a0, a1
+    add         a2, a2, a3
+    add         a4, a4, a5
+    mv          t0, a6
+    addi        a7, a7, -1
+    bgtz        a7, 1b
+
     ret
 endfunc
 

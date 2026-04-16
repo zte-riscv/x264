@@ -1049,6 +1049,7 @@ if [ $asm = auto -a $ARCH = LOONGARCH ] ; then
 fi
 
 if [ $asm = auto -a $ARCH = RISCV ] ; then
+    define HAVE_RISCV
     if ! echo $CFLAGS | grep -Eq '(-march=|-mabi=)' ; then
         CFLAGS="-march=rv64gc -mabi=lp64d $CFLAGS"
     fi
@@ -1158,6 +1159,14 @@ if cc_check 'time.h' '' 'clock_gettime(CLOCK_MONOTONIC, 0);' ; then
 elif cc_check 'time.h' '-lrt' 'clock_gettime(CLOCK_MONOTONIC, 0);' ; then
     define HAVE_CLOCK_GETTIME
     LDFLAGS="$LDFLAGS -lrt"
+fi
+
+if cc_check 'sys/hwprobe.h' '' 'struct riscv_hwprobe p; p.key = 0;' ; then
+    define HAVE_SYS_HWPROBE_H
+fi
+
+if cc_check 'asm/hwprobe.h' '' 'struct riscv_hwprobe p; p.key = 0;' ; then
+    define HAVE_ASM_HWPROBE_H
 fi
 
 if [ "$SYS" != "WINDOWS" ] && cpp_check "sys/mman.h unistd.h" "" "defined(MAP_PRIVATE)"; then

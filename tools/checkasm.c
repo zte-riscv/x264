@@ -121,7 +121,7 @@ static inline uint32_t read_time(void)
     uint32_t id = 0;
     asm volatile( "rdtimel.w  %0, %1" : "=r"(a), "=r"(id) :: "memory" );
 #elif ARCH_RISCV
-    asm volatile( "rdcycle  %0" : "=r"(a):: "memory" );
+    asm volatile( "rdtime %0" : "=r"(a) :: "memory" );
 #endif
     return a;
 }
@@ -226,6 +226,7 @@ static void print_bench(void)
                     b->cpu&X264_CPU_LASX ? "lasx" :
                     b->cpu&X264_CPU_LSX ? "lsx" :
 #elif ARCH_RISCV
+                    b->cpu&X264_CPU_RVV128 ? "rvv128" :
                     b->cpu&X264_CPU_RVV ? "rvv" :
 #endif
                     "c",
@@ -2693,7 +2694,7 @@ static void run_cabac_terminal_##cpu( x264_t *h, uint8_t *dst )\
 DECL_CABAC(c)
 #if HAVE_MMX
 DECL_CABAC(asm)
-#elif HAVE_AARCH64
+#elif HAVE_AARCH64 || HAVE_RISCV
 DECL_CABAC(asm)
 #else
 #define run_cabac_decision_asm run_cabac_decision_c
@@ -3024,6 +3025,8 @@ static int check_all_flags( void )
 #elif ARCH_RISCV
     if( cpu_detect & X264_CPU_RVV )
         ret |= add_flags( &cpu0, &cpu1, X264_CPU_RVV, "RVV" );
+    if( cpu_detect & X264_CPU_RVV128 )
+        ret |= add_flags( &cpu0, &cpu1, X264_CPU_RVV128, "RVV128" );
 #endif
     return ret;
 }

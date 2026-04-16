@@ -27,6 +27,11 @@
 
 #include "base.h"
 
+#if HAVE_SYS_HWPROBE_H
+#include <sys/hwprobe.h>
+#elif HAVE_ASM_HWPROBE_H
+#include <asm/hwprobe.h>
+#endif
 #if SYS_CYGWIN || SYS_SunOS || SYS_OPENBSD
 #include <unistd.h>
 #endif
@@ -493,17 +498,84 @@ uint32_t x264_cpu_detect( void )
     return flags;
 }
 
-#elif HAVE_RVV
-#include <sys/auxv.h>
-#define RISCV_HWCAP_RVV   (1U << ('v' - 'a'))
+#elif HAVE_RISCV
+#include <sys/syscall.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/utsname.h>
 
+#ifndef RISCV_HWPROBE_KEY_IMA_EXT_0
+#define RISCV_HWPROBE_KEY_IMA_EXT_0 4
+#endif
+#ifndef RISCV_HWPROBE_IMA_V
+#define RISCV_HWPROBE_IMA_V (1ULL << 2)
+#endif
+#ifndef __NR_riscv_hwprobe
+#define __NR_riscv_hwprobe 258
+#endif
+
+static int get_kernel_version(void) {
+    struct utsname name;
+    if (uname(&name) < 0) return 0;
+    int major, minor;
+    if (sscanf(name.release, "%d.%d", &major, &minor) == 2) {
+        return major * 100 + minor;
+    }
+    return 0;
+}
+
+struct x264_riscv_hwprobe {
+    int64_t key;
+    uint64_t value;
+};
+
+int x264_get_vlenb( void );
+
+// Specifically requires RVV 1.0+ ISA
 uint32_t x264_cpu_detect( void )
 {
     uint32_t flags = 0;
-    uint32_t hwcap = (uint32_t)getauxval( AT_HWCAP );
+    int k_ver = get_kernel_version();
+    if (k_ver >= 604) 
+    {
+        struct x264_riscv_hwprobe pairs[1];
+        pairs[0].key = RISCV_HWPROBE_KEY_IMA_EXT_0;
+        pairs[0].value = 0;
 
-    if( hwcap & RISCV_HWCAP_RVV )
-        flags |= X264_CPU_RVV;
+        if ( syscall(__NR_riscv_hwprobe, pairs, 1, 0, NULL, 0) == 0 )
+        {
+            if ( pairs[0].value & RISCV_HWPROBE_IMA_V )
+            {
+                flags |= X264_CPU_RVV;
+                if ( x264_get_vlenb() == 16 )
+                    flags |= X264_CPU_RVV128;
+            }
+            return flags;
+        }
+    }
+
+    FILE *f = fopen("/proc/cpuinfo", "r");
+    if (f)
+    {
+        char buf[512];
+        while (fgets(buf, sizeof(buf), f))
+        {
+            if (strncmp(buf, "isa", 3) == 0)
+            {
+                if (strstr(buf, "rv64"))
+                {
+                    if (strstr(buf, "v_") || strstr(buf, "v\n"))
+                    {
+                        flags |= X264_CPU_RVV;
+                        if ( x264_get_vlenb() == 16 )
+                            flags |= X264_CPU_RVV128;   
+                        break; 
+                    }
+                }
+            }
+        }
+        fclose(f);
+    }
 
     return flags;
 }

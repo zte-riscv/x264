@@ -1175,6 +1175,7 @@ void x264_zigzag_init( uint32_t cpu, x264_zigzag_function_t *pf_progressive, x26
 #if HAVE_RVV
     if ( cpu&X264_CPU_RVV ) {
         pf_progressive->scan_4x4   = x264_zigzag_scan_4x4_frame_rvv;
+        pf_progressive->scan_8x8 = x264_zigzag_scan_8x8_frame_rvv;
     }
 #endif  // HAVE_RVV
 #endif // !HIGH_BIT_DEPTH
