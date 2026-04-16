@@ -498,42 +498,6 @@ function predict_8x8c_h_rvv
     ret
 endfunc
 
-function predict_8x8c_v_rvv
-    li          t2, FDEC_STRIDE
-    vsetivli    zero, 8, e8, mf2, ta, ma
-    sub         t0, a0, t2
-    vle8.v      v8, (t0)
-.rept 8
-    vse8.v      v8, (a0)
-    add         a0, a0, t2
-.endr
-    ret
-endfunc
-
-function predict_8x8_v_rvv
-    li          t2, FDEC_STRIDE
-    addi        a1, a1, 16
-    vsetivli    zero, 8, e8, mf2, ta, ma
-    vle8.v      v0, (a1)
-.rept 8
-    vse8.v    v0, (a0)
-    add      a0, a0, t2
-.endr
-    ret
-endfunc
-
-function predict_8x16c_v_rvv
-    li          t2, FDEC_STRIDE
-    vsetivli    zero, 8, e8, mf2, ta, ma
-    sub         t0, a0, t2
-    vle8.v      v8, (t0)
-.rept 16
-    vse8.v      v8, (a0)
-    add         a0, a0, t2
-.endr
-    ret
-endfunc
-
 function predict_8x16c_dc_top_rvv
     addi        a2, a0, -32   
     vsetivli    zero, 8, e8, mf2, ta, ma
@@ -816,6 +780,297 @@ function predict_16x16_h_rvv
     vse8.v    v0, (a0)
     addi      a0, a0, 32
 .endr
+
+    ret
+endfunc
+
+function predict_16x16_p_rvv, export=1
+    // consts
+    li      t1, FDEC_STRIDE         // 32
+    neg     t2, t1                  // -32
+    li      t3, -1                  // -1
+    
+    // weights v30 = {1..8}
+    vsetivli zero, 8, e16, m1, ta, ma
+    vid.v   v30
+    vadd.vi v30, v30, 1
+
+    // calc H
+    addi    t4, a0, -FDEC_STRIDE
+    
+    // right
+    addi    t5, t4, 8
+    vle8.v  v0, (t5)
+    vzext.vf2 v2, v0
+
+    // left
+    addi    t5, t4, 6
+    vlse8.v v1, (t5), t3
+    vzext.vf2 v4, v1
+
+    vsub.vv v2, v2, v4
+    vmul.vv v2, v2, v30
+    
+    vmv.v.i v0, 0
+    vredsum.vs v2, v2, v0
+    vmv.x.s t4, v2                  // H
+    
+    // calc V
+    addi    t5, a0, -1
+    
+    // bottom
+    addi    t6, t5, 8*FDEC_STRIDE
+    vlse8.v v0, (t6), t1
+    vzext.vf2 v6, v0
+
+    // top
+    addi    t6, t5, 6*FDEC_STRIDE
+    vlse8.v v1, (t6), t2
+    vzext.vf2 v8, v1
+
+    vsub.vv v6, v6, v8
+    vmul.vv v6, v6, v30
+    
+    vmv.v.i v0, 0
+    vredsum.vs v6, v6, v0
+    vmv.x.s t5, v6                  // V
+    
+    // calc a, b, c, i00
+    li      t6, 5
+    // b
+    mul     t4, t4, t6
+    addi    t4, t4, 32
+    srai    t4, t4, 6
+    
+    // c
+    mul     t5, t5, t6
+    addi    t5, t5, 32
+    srai    t5, t5, 6
+
+    // a
+    li      a1, 15*FDEC_STRIDE - 1
+    add     a1, a0, a1
+    lbu     a2, (a1)
+    
+    li      a3, 15 - FDEC_STRIDE
+    add     a3, a0, a3
+    lbu     a4, (a3)
+    
+    add     a2, a2, a4
+    slli    a2, a2, 4
+
+    // i00
+    li      t6, 7
+    mul     a5, t4, t6
+    sub     a2, a2, a5
+    mul     a6, t5, t6
+    sub     a2, a2, a6
+    addi    a2, a2, 16              // i00 (base)
+
+    // pre-calc x*b
+    vsetivli zero, 16, e16, m2, ta, ma
+    vid.v   v8
+    vmul.vx v12, v8, t4
+
+    li      a7, 16                  // loop counter
+    mv      t6, a0                  // dst
+    mv      t0, a2                  // base
+
+1:
+    // reset vtype for loop start
+    vsetivli zero, 16, e16, m2, ta, ma
+    
+    // base + x*b
+    vadd.vx v16, v12, t0
+    
+    // >> 5
+    vsra.vi v16, v16, 5
+    
+    // clamp neg to 0
+    vmax.vx v16, v16, zero
+    
+    // narrow 16 -> 8
+    vsetivli zero, 16, e8, m1, ta, ma
+    vnclipu.wi v22, v16, 0
+    
+    // store
+    vse8.v  v22, (t6)
+
+    // update ptr & base
+    addi    t6, t6, FDEC_STRIDE
+    add     t0, t0, t5
+
+    addi    a7, a7, -1
+    bnez    a7, 1b
+
+    ret
+endfunc
+
+function predict_8x8c_v_rvv
+    li          t2, FDEC_STRIDE
+    vsetivli    zero, 8, e8, mf2, ta, ma
+
+    sub         t0, a0, t2      # t0 = dst - stride (Source address)
+    vle8.v      v8, (t0)        # Load 8 bytes (64 bits) into v8
+
+.rept 8
+    vse8.v      v8, (a0)        # Store current row
+    add         a0, a0, t2      # dst += stride
+.endr
+
+    ret
+endfunc
+
+function predict_8x8_v_rvv
+    li          t2, FDEC_STRIDE
+    addi        a1, a1, 16       
+    vsetivli    zero, 8, e8, mf2, ta, ma
+    vle8.v      v0, (a1)
+
+.rept 8
+    vse8.v    v0, (a0)
+    add      a0, a0, t2
+.endr
+
+    ret
+endfunc
+
+function predict_8x16c_v_rvv
+    li          t2, FDEC_STRIDE
+    vsetivli    zero, 8, e8, mf2, ta, ma
+
+    sub         t0, a0, t2
+    vle8.v      v8, (t0)
+
+.rept 16
+    vse8.v      v8, (a0)
+    add         a0, a0, t2
+.endr
+
+    ret
+endfunc
+
+// void x264_predict_8x16c_p_rvv( uint8_t *src )
+function predict_8x16c_p_rvv, export=1
+    li      t1, FDEC_STRIDE
+    neg     t2, t1
+    li      t3, -1
+
+    // 1. Prepare Weights and Indices
+    vsetivli zero, 4, e16, mf2, ta, ma
+    vid.v   v26                   // {0, 1, 2, 3}
+    vrsub.vi v24, v26, 3          // H_Rev_Idx
+    vadd.vi v26, v26, 1           // H_Weights
+
+    vsetivli zero, 8, e16, m1, ta, ma
+    vid.v   v30                   // {0..7}
+    vrsub.vi v28, v30, 7          // V_Rev_Idx
+    vadd.vi v30, v30, 1           // V_Weights
+
+    // 2. Calculate H
+    addi    t4, a0, -FDEC_STRIDE  // Row -1
+    addi    t5, t4, 4
+    vsetivli zero, 4, e8, mf4, ta, ma
+    vle8.v  v0, (t5)
+    vsetivli zero, 4, e16, mf2, ta, ma
+    vzext.vf2 v2, v0              // Top-Right
+
+    addi    t5, t4, -1
+    vsetivli zero, 4, e8, mf4, ta, ma
+    vle8.v  v1, (t5)
+    vsetivli zero, 4, e16, mf2, ta, ma
+    vzext.vf2 v4, v1              // Top-Left
+
+    vrgather.vv v6, v4, v24       // Reverse Top-Left
+    vsub.vv v2, v2, v6
+    vmul.vv v2, v2, v26           // Apply Weights
+
+    vmv.v.i v0, 0
+    vredsum.vs v2, v2, v0
+    vmv.x.s t4, v2                // H (raw)
+
+    // 3. Calculate V
+    addi    t5, a0, -1            // Col -1
+    li      t6, 8
+    mul     t6, t6, t1
+    add     t6, t5, t6            // P[-1, 8]
+    vsetivli zero, 8, e8, mf2, ta, ma
+    vlse8.v v0, (t6), t1
+
+    vsetivli zero, 8, e16, m1, ta, ma
+    vzext.vf2 v6, v0              // Bottom-Half
+
+    add     t6, t5, t2            // P[-1, -1]
+    vsetivli zero, 8, e8, mf2, ta, ma
+    vlse8.v v1, (t6), t1
+
+    vsetivli zero, 8, e16, m1, ta, ma
+    vzext.vf2 v8, v1              // Top-Half
+
+    vrgather.vv v10, v8, v28      // Reverse Top-Half
+    vsub.vv v6, v6, v10
+    vmul.vv v6, v6, v30           // Apply Weights
+
+    vmv.v.i v0, 0
+    vredsum.vs v6, v6, v0
+    vmv.x.s t5, v6                // V (raw)
+
+    // 4. Calculate Coefficients
+    li      t6, 17
+    mul     t4, t4, t6
+    addi    t4, t4, 16
+    srai    t4, t4, 5             // b = (17 * H + 16) >> 5
+
+    li      t6, 5
+    mul     t5, t5, t6
+    addi    t5, t5, 32
+    srai    t5, t5, 6             // c = (5 * V + 32) >> 6
+
+    li      a1, 7
+    add     a2, a0, a1
+    lbu     a2, -FDEC_STRIDE(a2)  // [7, -1]
+
+    li      a3, 15
+    mul     a3, a3, t1
+    addi    a3, a3, -1
+    add     a3, a0, a3
+    lbu     a4, (a3)              // [-1, 15]
+
+    add     a2, a2, a4
+    slli    a2, a2, 4             // a = 16 * (TopRight[7] + BottomLeft[15])
+
+    li      t6, 3
+    mul     a5, t4, t6            // 3b
+    li      t6, 7
+    mul     a6, t5, t6            // 7c
+    sub     a2, a2, a5
+    sub     a2, a2, a6
+    addi    a2, a2, 16            // i00 = a - 3b - 7c + 16
+
+    // 5. Generate Block (8x16)
+    vsetivli zero, 8, e16, m1, ta, ma
+    vid.v   v8
+    vmul.vx v12, v8, t4           // v12 = x * b
+
+    li      a7, 16                // Loop counter (Height 16)
+    mv      t6, a0                // dst
+    mv      t0, a2                // base
+
+1:
+    vsetivli zero, 8, e16, m1, ta, ma
+    vadd.vx v16, v12, t0          // base + x*b
+    vsra.vi v16, v16, 5           // >> 5
+    vmax.vx v16, v16, zero
+
+    vsetivli zero, 8, e8, mf2, ta, ma
+    vnclipu.wi v22, v16, 0
+
+    vse8.v  v22, (t6)
+
+    add     t6, t6, t1
+    add     t0, t0, t5            // base += c
+    addi    a7, a7, -1
+    bnez    a7, 1b
 
     ret
 endfunc

@@ -79,6 +79,7 @@ void x264_predict_8x16c_init_rvv( uint32_t cpu, x264_predict_t pf[7] )
     {
         pf[I_PRED_CHROMA_V ]     = x264_predict_8x16c_v_rvv;
         pf[I_PRED_CHROMA_H ]     = x264_predict_8x16c_h_rvv;
+        pf[I_PRED_CHROMA_P]      = x264_predict_8x16c_p_rvv;
         pf[I_PRED_CHROMA_DC]     = x264_predict_8x16c_dc_rvv;
         pf[I_PRED_CHROMA_DC_LEFT]= x264_predict_8x16c_dc_left_rvv;
         pf[I_PRED_CHROMA_DC_TOP ]= x264_predict_8x16c_dc_top_rvv;
@@ -96,6 +97,7 @@ void x264_predict_16x16_init_rvv( uint32_t cpu, x264_predict_t pf[7] )
         pf[I_PRED_16x16_DC_LEFT]= x264_predict_16x16_dc_left_rvv;
         pf[I_PRED_16x16_H ]     = x264_predict_16x16_h_rvv;
         pf[I_PRED_16x16_V ]     = x264_predict_16x16_v_rvv;
+        pf[I_PRED_16x16_P ]      = x264_predict_16x16_p_rvv;
 
     }
 #endif // !HIGH_BIT_DEPTH

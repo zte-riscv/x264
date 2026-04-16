@@ -153,39 +153,6 @@ MACH    .const_data
 #define FENC_STRIDE 16
 #define FDEC_STRIDE 32
 
-# .macro TRANSPOSE4x4_16_spec buf, bstride, t1, t2, v0, v1, v2, v3
-#     mv          \t1, \buf
-#     vsse16.v    \v0, (\t1), \bstride
-#     addi        \t1, \t1, 2
-#     vsse16.v    \v1, (\t1), \bstride
-#     addi        \t1, \t1, 2
-#     vsse16.v    \v2, (\t1), \bstride
-#     addi        \t1, \t1, 2
-#     vsse16.v    \v3, (\t1), \bstride
-
-#     vle16.v     \v0, (\buf)
-#     add         \buf, \buf, \bstride
-#     vle16.v     \v1, (\buf)
-#     add         \buf, \buf, \bstride
-#     vle16.v     \v2, (\buf)
-#     add         \buf, \buf, \bstride
-#     vle16.v     \v3, (\buf)
-# .endm
-
-.macro TRANSPOSE4x4_16 v0, v1, v2, v3
-    addi sp,sp,-32
-    vsseg4e16.v \v0, (sp)
-    vle16.v \v0, (sp)
-    addi sp,sp,8
-    vle16.v \v1, (sp)
-    addi sp,sp,8
-    vle16.v \v2, (sp)
-    addi sp,sp,8
-    vle16.v \v3, (sp)
-    addi sp,sp,8
-.endm
-
-
 .macro TRANSPOSE4x8_16 t_imm, v0, v1, v2, v3, t0, t1, t2, t3
     li \t_imm, 0xaa
     vmv.v.x v0, \t_imm
@@ -231,44 +198,29 @@ MACH    .const_data
     vmv.v.v     \v0, \t0
 .endm
 
-.macro TRANSPOSE8x8_16 v0, v1, v2, v3, v4, v5, v6, v7
-    addi sp,sp,-128
-    mv   a6, sp
-    vse16.v \v0, (sp)
-    addi sp,sp,16
-    vse16.v \v1, (sp)
-    addi sp,sp,16
-    vse16.v \v2, (sp)
-    addi sp,sp,16
-    vse16.v \v3, (sp)
-    addi sp,sp,16
-    vse16.v \v4, (sp)
-    addi sp,sp,16
-    vse16.v \v5, (sp)
-    addi sp,sp,16
-    vse16.v \v6, (sp)
-    addi sp,sp,16
-    vse16.v \v7, (sp)
-    addi sp,sp,16
-    vlseg8e16.v \v0, (a6)
-//    addi sp,sp,-128
-//    vsseg8e16.v \v0, (sp)
-//    vle16.v \v0, (sp)
-//    addi sp,sp,16
-//    vle16.v \v1, (sp)
-//    addi sp,sp,16
-//    vle16.v \v2, (sp)
-//    addi sp,sp,16
-//    vle16.v \v3, (sp)
-//    addi sp,sp,16
-//    vle16.v \v4, (sp)
-//    addi sp,sp,16
-//    vle16.v \v5, (sp)
-//    addi sp,sp,16
-//    vle16.v \v6, (sp)
-//    addi sp,sp,16
-//    vle16.v \v7, (sp)
-//    addi sp,sp,16
+.macro TRANSPOSE8x8_16 v0, v1, v2, v3, v4, v5, v6, v7, tmp, baseaddr
+    addi \baseaddr,\baseaddr,-128
+    # Save the starting address to tmp
+    mv \tmp, \baseaddr
+    # Store v0~v7 to a continuous memory area starting at baseaddr, incrementing baseaddr by 16 after each store
+    vse16.v \v0, (\baseaddr)
+    addi \baseaddr, \baseaddr, 16
+    vse16.v \v1, (\baseaddr)
+    addi \baseaddr, \baseaddr, 16
+    vse16.v \v2, (\baseaddr)
+    addi \baseaddr, \baseaddr, 16
+    vse16.v \v3, (\baseaddr)
+    addi \baseaddr, \baseaddr, 16
+    vse16.v \v4, (\baseaddr)
+    addi \baseaddr, \baseaddr, 16
+    vse16.v \v5, (\baseaddr)
+    addi \baseaddr, \baseaddr, 16
+    vse16.v \v6, (\baseaddr)
+    addi \baseaddr, \baseaddr, 16
+    vse16.v \v7, (\baseaddr) 
+    addi \baseaddr, \baseaddr, 16
+    # Load 8 segments consecutively from the starting address (pointed to by tmp) into v0~v7 (implements transpose)
+    vlseg8e16.v \v0, (\tmp)
 .endm
 
 .macro TRANSPOSE8x16 buf, bstride, tmp, v0, v1, v2, v3, v4, v5, v6, v7, t0, t1, t2, t3, t4, t5, t6, t7

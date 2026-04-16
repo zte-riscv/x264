@@ -66,5 +66,7 @@ void x264_add16x16_idct8_rvv( uint8_t *p_dst, int16_t dct[4][64] );
 
 #define x264_zigzag_scan_4x4_frame_rvv x264_template(zigzag_scan_4x4_frame_rvv)
 void x264_zigzag_scan_4x4_frame_rvv( int16_t level[16], int16_t dct[16] );
+#define x264_zigzag_scan_8x8_frame_rvv x264_template(zigzag_scan_8x8_frame_rvv)
+void x264_zigzag_scan_8x8_frame_rvv( int16_t level[64], int16_t dct[64] );
 
 #endif

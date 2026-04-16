@@ -84,7 +84,7 @@ void x264_cabac_encode_flush( x264_t *h, x264_cabac_t *cb );
 #define x264_cabac_encode_decision x264_cabac_encode_decision_asm
 #define x264_cabac_encode_bypass x264_cabac_encode_bypass_asm
 #define x264_cabac_encode_terminal x264_cabac_encode_terminal_asm
-#elif ARCH_RISCV
+#elif HAVE_RISCV
 #define x264_cabac_encode_decision x264_cabac_encode_decision_asm
 #define x264_cabac_encode_bypass x264_cabac_encode_bypass_asm
 #define x264_cabac_encode_terminal x264_cabac_encode_terminal_asm

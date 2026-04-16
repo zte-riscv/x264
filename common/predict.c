@@ -1088,8 +1088,9 @@ void x264_predict_4x4_init( uint32_t cpu, x264_predict_t pf[12] )
     x264_predict_4x4_init_loongarch( cpu, pf );
 #endif
 
-#if HAVE_RVV
-    x264_predict_4x4_init_rvv( cpu, pf );
-#endif
+// The current RVV implementation shows no improvement over the scalar version
+// #if HAVE_RVV
+//     x264_predict_4x4_init_rvv( cpu, pf );
+// #endif
 }
 

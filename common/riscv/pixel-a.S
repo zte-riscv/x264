@@ -208,28 +208,22 @@ function pixel_sad_8x4_rvv
     add         a0, a0, a1
     vle8.v      v2, (a2)
     add         a2, a2, a3
+    uabdl       v16, v0, v2, v8, v12
     vle8.v      v3, (a2)
     add         a2, a2, a3
+    uabdl       v17, v1, v3, v10, v14
 
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    uabdl       v16, v0, v2, v8, v12
-
-    vsetivli    zero, 8, e8, mf2, ta, ma
     vle8.v      v0, (a0)
     add         a0, a0, a1
     vle8.v      v1, (a0)
     vle8.v      v2, (a2)
     add         a2, a2, a3
-    vle8.v      v3, (a2)
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
     uabal       v16, v0, v2, v8, v12
+    vle8.v      v3, (a2)
+    uabal       v17, v1, v3, v10, v14
 
-    vsetivli    zero, 16, e16, m2, ta, ma
+    vsetivli    zero, 8, e16, m1, ta, ma
+    vadd.vv     v16, v16, v17
     vmv.s.x     v31, zero
     vredsum.vs  v31, v16, v31
     vmv.x.s     a0, v31
@@ -245,30 +239,24 @@ function pixel_sad_8x8_rvv
     add         a0, a0, a1
     vle8.v      v2, (a2)
     add         a2, a2, a3
+    uabdl       v16, v0, v2, v8, v12
     vle8.v      v3, (a2)
     add         a2, a2, a3
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    uabdl       v16, v0, v2, v8, v12
+    uabdl       v17, v1, v3, v10, v14
 .rept 3
-    vsetivli    zero, 8, e8, mf2, ta, ma
     vle8.v      v0, (a0)
     add         a0, a0, a1
     vle8.v      v1, (a0)
     add         a0, a0, a1
     vle8.v      v2, (a2)
     add         a2, a2, a3
+    uabal       v16, v0, v2, v8, v12
     vle8.v      v3, (a2)
     add         a2, a2, a3
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    uabal       v16, v0, v2, v8, v12
+    uabal       v17, v1, v3, v10, v14
 .endr
-    vsetivli    zero, 16, e16, m2, ta, ma
+    vsetivli    zero, 8, e16, m1, ta, ma
+    vadd.vv     v16, v16, v17
     vmv.s.x     v31, zero
     vredsum.vs  v31, v16, v31
     vmv.x.s     a0, v31
@@ -284,30 +272,24 @@ function pixel_sad_8x16_rvv
     add         a0, a0, a1
     vle8.v      v2, (a2)
     add         a2, a2, a3
+    uabdl       v16, v0, v2, v8, v12
     vle8.v      v3, (a2)
     add         a2, a2, a3
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    uabdl       v16, v0, v2, v8, v12
+    uabdl       v17, v1, v3, v10, v14
 .rept 7
-    vsetivli    zero, 8, e8, mf2, ta, ma
     vle8.v      v0, (a0)
     add         a0, a0, a1
     vle8.v      v1, (a0)
     add         a0, a0, a1
     vle8.v      v2, (a2)
     add         a2, a2, a3
+    uabal       v16, v0, v2, v8, v12
     vle8.v      v3, (a2)
     add         a2, a2, a3
-
-    vsetivli    zero, 16, e8, m1, ta, ma
-    vslideup.vi v0, v1, 8
-    vslideup.vi v2, v3, 8
-    uabal       v16, v0, v2, v8, v12
+    uabal       v17, v1, v3, v10, v14
 .endr
-    vsetivli    zero, 16, e16, m2, ta, ma
+    vsetivli    zero, 8, e16, m1, ta, ma
+    vadd.vv     v16, v16, v17
     vmv.s.x     v31, zero
     vredsum.vs  v31, v16, v31
     vmv.x.s     a0, v31
